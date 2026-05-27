@@ -40,3 +40,19 @@ __screenshots__/
 
 test-results/
 playwright-report/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+*.pfx
+
+# Runtime/app data
+data/
+/docker-data/
+
+# OS files
+Thumbs.db

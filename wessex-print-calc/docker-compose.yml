@@ -1,13 +1,11 @@
 services:
   3d-print-calc:
-    build: .
+    image: ${IMAGE_REPO:-yourdockerhubuser/3d-print-calc}:${IMAGE_TAG:-1.0.0}
     container_name: 3d-print-calc
     environment:
-      - PUID=1000
-      - PGID=1000
       - TZ=Europe/London
     volumes:
-      - C:/docker/3d-print-calc/data:/data
+      - /docker/3d-print-calc/data:/data
     ports:
       - 5123:80
     restart: unless-stopped

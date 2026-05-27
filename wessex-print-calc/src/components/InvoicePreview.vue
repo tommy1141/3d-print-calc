@@ -7,9 +7,6 @@ const props = defineProps<{
   items: InvItem[]
   business: string
   customer: string
-  customerEmail?: string
-  customerPhone?: string
-  customerAddress?: string
   invoiceNo: string
   date: string
 }>()
@@ -55,9 +52,6 @@ const hasBankDetails = computed(() => !!(company.bankName.value || company.accou
         <div class="party">
           <div class="party-label">Bill To</div>
           <div class="party-name">{{ customer || 'Customer' }}</div>
-          <div v-if="customerAddress" class="party-detail" style="white-space:pre-line">{{ customerAddress }}</div>
-          <div v-if="customerEmail" class="party-detail">{{ customerEmail }}</div>
-          <div v-if="customerPhone" class="party-detail">{{ customerPhone }}</div>
         </div>
       </div>
 

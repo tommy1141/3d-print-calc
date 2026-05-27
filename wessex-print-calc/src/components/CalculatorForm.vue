@@ -15,11 +15,8 @@ const printGrams = defineModel<number | null>('printGrams')
 const printHours = defineModel<number | null>('printHours')
 const printMins  = defineModel<number | null>('printMins')
 const labourMins = defineModel<number | null>('labourMins')
-const jobDesc         = defineModel<string>('jobDesc')
-const customerName    = defineModel<string>('customerName')
-const customerEmail   = defineModel<string>('customerEmail')
-const customerPhone   = defineModel<string>('customerPhone')
-const customerAddress = defineModel<string>('customerAddress')
+const jobDesc    = defineModel<string>('jobDesc')
+const customerName = defineModel<string>('customerName')
 </script>
 
 <template>
@@ -103,40 +100,6 @@ const customerAddress = defineModel<string>('customerAddress')
       </datalist>
     </div>
 
-    <div class="contact-row">
-      <div class="field-wrapper">
-        <label for="customerEmail">Email</label>
-        <input
-          id="customerEmail"
-          class="text-input"
-          type="text"
-          placeholder="e.g. john@example.com"
-          v-model="customerEmail"
-        />
-      </div>
-      <div class="field-wrapper">
-        <label for="customerPhone">Phone</label>
-        <input
-          id="customerPhone"
-          class="text-input"
-          type="text"
-          placeholder="e.g. 07700 900123"
-          v-model="customerPhone"
-        />
-      </div>
-    </div>
-
-    <div class="field-wrapper">
-      <label for="customerAddress">Address</label>
-      <textarea
-        id="customerAddress"
-        class="text-input address-input"
-        placeholder="123 Main Street&#10;Bristol&#10;BS1 1AA"
-        rows="3"
-        v-model="customerAddress"
-      />
-    </div>
-
     <button class="btn-calculate" @click="emit('calculate')">Calculate Total Cost</button>
 
     <p class="error" v-show="showError">
@@ -204,24 +167,6 @@ const customerAddress = defineModel<string>('customerAddress')
   font-size: 0.82rem;
   margin-top: 10px;
   text-align: center;
-}
-
-.contact-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0 1rem;
-}
-
-@media (max-width: 480px) {
-  .contact-row {
-    grid-template-columns: 1fr;
-  }
-}
-
-.address-input {
-  resize: vertical;
-  min-height: 72px;
-  font-family: inherit;
 }
 
 .field-wrapper {

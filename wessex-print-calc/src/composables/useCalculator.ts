@@ -1,9 +1,9 @@
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import type { CalcResult, InvItem } from '@/types'
 import { useFilaments } from './useFilaments'
 
 export function useCalculator() {
-  const { selectedPrice } = useFilaments()
+  const { selectedPrice, selectedCostPrice } = useFilaments()
 
   // Per-job inputs (reset after adding to order)
   const printGrams = ref<number | null>(null)
@@ -12,11 +12,16 @@ export function useCalculator() {
   const jobDesc    = ref('')
   const labourMins = ref<number | null>(15)
 
-  // Shared settings (persist between jobs)
-  const wattage    = ref<number>(300)
-  const ratePerKwh = ref<number>(0.245)
-  const labourRate = ref<number>(13.01)
-  const margin     = ref<number>(30)
+  // Shared settings (persisted to localStorage)
+  const ls = (k: string, fallback: number) => { const v = localStorage.getItem(k); return v !== null ? +v : fallback }
+  const wattage    = ref<number>(ls('calc-wattage', 300))
+  const ratePerKwh = ref<number>(ls('calc-rate', 0.245))
+  const labourRate = ref<number>(ls('calc-labour', 13.01))
+  const margin     = ref<number>(ls('calc-margin', 30))
+  watch(wattage,    val => localStorage.setItem('calc-wattage', String(val)))
+  watch(ratePerKwh, val => localStorage.setItem('calc-rate',    String(val)))
+  watch(labourRate, val => localStorage.setItem('calc-labour',  String(val)))
+  watch(margin,     val => localStorage.setItem('calc-margin',  String(val)))
 
   // UI state
   const showResult  = ref(false)
@@ -55,6 +60,11 @@ export function useCalculator() {
     const sellingPrice = total / (1 - mg / 100)
     const profit       = sellingPrice - total
 
+    const costPkg = selectedCostPrice.value
+    const actualProfit = (costPkg !== null && costPkg > 0 && costPkg !== pkg)
+      ? sellingPrice - ((costPkg / 1000) * pg + powerCost + labourCost)
+      : undefined
+
     result.value = {
       filamentCost,
       powerCost,
@@ -63,6 +73,7 @@ export function useCalculator() {
       sellingPrice,
       profit,
       breakdown: `Filament: £${pkg.toFixed(2)}/kg × ${pg}g  |  Power: ${w}W × ${phRaw}h ${pmRaw}m × £${rate}/kWh`,
+      actualProfit,
     }
 
     showResult.value = true

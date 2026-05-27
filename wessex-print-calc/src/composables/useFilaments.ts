@@ -1,4 +1,4 @@
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 
 export type FilamentType = 'pla_plus' | 'petg' | 'abs' | 'tpu'
 
@@ -11,17 +11,25 @@ export const FILAMENT_LABELS: Record<FilamentType, string> = {
 
 export const FILAMENT_KEYS: FilamentType[] = ['pla_plus', 'petg', 'abs', 'tpu']
 
-// Module-level shared state — persists across all component instances
-const prices = ref<Record<FilamentType, number | null>>({
-  pla_plus: 17.99,
-  petg:     17.99,
-  abs:      17.99,
-  tpu:      17.99,
-})
+// Module-level shared state — persisted to localStorage
+const _storedPrices = localStorage.getItem('filament-prices')
+const prices = ref<Record<FilamentType, number | null>>(
+  _storedPrices ? JSON.parse(_storedPrices) : { pla_plus: 17.99, petg: 17.99, abs: 17.99, tpu: 17.99 }
+)
+watch(prices, val => localStorage.setItem('filament-prices', JSON.stringify(val)), { deep: true })
 
-const selectedType = ref<FilamentType>('pla_plus')
+const _storedType = localStorage.getItem('filament-type') as FilamentType | null
+const selectedType = ref<FilamentType>(_storedType ?? 'pla_plus')
+watch(selectedType, val => localStorage.setItem('filament-type', val))
+
+const _storedCostPrices = localStorage.getItem('filament-cost-prices')
+const costPrices = ref<Record<FilamentType, number | null>>(
+  _storedCostPrices ? JSON.parse(_storedCostPrices) : { pla_plus: null, petg: null, abs: null, tpu: null }
+)
+watch(costPrices, val => localStorage.setItem('filament-cost-prices', JSON.stringify(val)), { deep: true })
 
 export function useFilaments() {
-  const selectedPrice = computed(() => prices.value[selectedType.value])
-  return { prices, selectedType, selectedPrice }
+  const selectedPrice     = computed(() => prices.value[selectedType.value])
+  const selectedCostPrice = computed(() => costPrices.value[selectedType.value])
+  return { prices, costPrices, selectedType, selectedPrice, selectedCostPrice }
 }

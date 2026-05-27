@@ -1,4 +1,3 @@
-import type { InvItem } from '@/types'
 
 function escHtml(str: string): string {
   return str
@@ -37,16 +36,15 @@ const INVOICE_STYLES = `
 `
 
 export function useInvoice() {
-  function generateInvoice(items: InvItem[], business: string, customer: string) {
-    if (items.length === 0) {
-      alert('Please add at least one item to the order first.')
-      return
-    }
-
+  function generateInvoice(
+    items: { job: string; sellingPrice: number }[],
+    business: string,
+    customer: string,
+    invoiceNo: string,
+    date: string,
+  ) {
     const biz        = escHtml(business || 'My 3D Print Shop')
     const cust       = escHtml(customer || 'Customer')
-    const date       = new Date().toLocaleDateString('en-GB')
-    const invoiceNo  = 'INV-' + Date.now().toString().slice(-6)
     const grandTotal = items.reduce((sum, item) => sum + item.sellingPrice, 0)
     const rows       = items
       .map(item => `<tr><td>${escHtml(item.job)}</td><td class="amount">£${item.sellingPrice.toFixed(2)}</td></tr>`)
@@ -59,7 +57,7 @@ export function useInvoice() {
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
-  <title>Invoice ${invoiceNo}</title>
+  <title>${escHtml(invoiceNo)}</title>
   <style>${INVOICE_STYLES}</style>
 </head>
 <body>
@@ -70,7 +68,7 @@ export function useInvoice() {
     </div>
     <div class="inv-meta">
       <h2>INVOICE</h2>
-      <p>${invoiceNo}</p>
+      <p>${escHtml(invoiceNo)}</p>
       <p>${date}</p>
     </div>
   </div>

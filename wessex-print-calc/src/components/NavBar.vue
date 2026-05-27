@@ -45,6 +45,20 @@ function go(view: NavView) {
         >
           ⚙️ Company Setup
         </button>
+        <button
+          class="nav-tab"
+          :class="{ active: activeView === 'invoices' }"
+          @click="go('invoices')"
+        >
+          📊 Invoices
+        </button>
+        <button
+          class="nav-tab"
+          :class="{ active: activeView === 'stats' }"
+          @click="go('stats')"
+        >
+          📈 Stats
+        </button>
       </nav>
 
       <!-- Mobile burger -->
@@ -83,6 +97,20 @@ function go(view: NavView) {
             @click="go('setup')"
           >
             ⚙️ Company Setup
+          </button>
+          <button
+            class="nav-tab"
+            :class="{ active: activeView === 'invoices' }"
+            @click="go('invoices')"
+          >
+            📊 Invoices
+          </button>
+          <button
+            class="nav-tab"
+            :class="{ active: activeView === 'stats' }"
+            @click="go('stats')"
+          >
+            📈 Stats
           </button>
         </nav>
       </Transition>

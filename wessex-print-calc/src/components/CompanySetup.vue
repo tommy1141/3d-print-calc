@@ -6,7 +6,6 @@ const ratePerKwh   = defineModel<number | null>('ratePerKwh')
 const labourRate   = defineModel<number | null>('labourRate')
 const margin       = defineModel<number | null>('margin')
 const businessName = defineModel<string>('businessName')
-const customerName = defineModel<string>('customerName')
 </script>
 
 <template>
@@ -65,22 +64,13 @@ const customerName = defineModel<string>('customerName')
       <div class="setup-grid-full">
         <hr class="divider" />
         <p class="section-title">Invoice Details</p>
-        <div class="setup-grid">
-          <InputField
-            id="businessName"
-            label="Your business / name"
-            type="text"
-            placeholder="e.g. Wessex Prints"
-            v-model="businessName"
-          />
-          <InputField
-            id="customerName"
-            label="Default customer name"
-            type="text"
-            placeholder="e.g. John Smith"
-            v-model="customerName"
-          />
-        </div>
+        <InputField
+          id="businessName"
+          label="Your business / name"
+          type="text"
+          placeholder="e.g. Wessex Prints"
+          v-model="businessName"
+        />
       </div>
     </div>
 

@@ -34,8 +34,16 @@ const fmt = (n: number) => '£' + n.toFixed(2)
       <span class="row-value">{{ fmt(result.sellingPrice) }}</span>
     </div>
     <div class="result-row result-profit">
-      <span class="row-label">Your profit</span>
+      <span class="row-label">Markup profit</span>
       <span class="row-value">{{ fmt(result.profit) }} ({{ margin }}%)</span>
+    </div>
+    <div class="result-row result-takehome">
+      <span class="row-label">Take-home (incl. your labour)</span>
+      <span class="row-value">{{ fmt(result.profit + result.labourCost) }}</span>
+    </div>
+    <div v-if="result.actualProfit !== undefined" class="result-row result-actual-profit">
+      <span class="row-label">✨ Take-home at your cost price</span>
+      <span class="row-value">{{ fmt(result.actualProfit + result.labourCost) }}</span>
     </div>
     <p class="breakdown">{{ result.breakdown }}</p>
     <button class="btn-add" @click="emit('addToOrder')">&#x2795; Add to Order</button>
@@ -78,6 +86,14 @@ const fmt = (n: number) => '£' + n.toFixed(2)
 .result-profit { margin-top: 6px; }
 .result-profit .row-label { color: #a0a0b0; font-size: 0.85rem; }
 .result-profit .row-value { color: #a0c8a0; font-size: 0.95rem; font-weight: 600; }
+
+.result-takehome { margin-top: 2px; }
+.result-takehome .row-label { color: #4caf50; font-weight: 600; font-size: 0.88rem; }
+.result-takehome .row-value { color: #4caf50; font-size: 1.1rem; font-weight: 700; }
+
+.result-actual-profit { margin-top: 4px; }
+.result-actual-profit .row-label { color: #ffd700; font-size: 0.85rem; }
+.result-actual-profit .row-value { color: #ffd700; font-size: 1.05rem; font-weight: 700; }
 
 .breakdown {
   color: #808090;

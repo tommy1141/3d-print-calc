@@ -1,0 +1,185 @@
+<script setup lang="ts">
+import { ref, onMounted } from 'vue'
+import { useInvoice } from '@/composables/useInvoice'
+import type { SavedInvoice } from '@/types'
+
+const emit = defineEmits<{ reprint: [inv: SavedInvoice] }>()
+
+const invoices = ref<SavedInvoice[]>([])
+const loading  = ref(true)
+const apiError = ref(false)
+
+const { generateInvoice } = useInvoice()
+
+onMounted(async () => {
+  try {
+    const res = await fetch('/api/invoices')
+    if (!res.ok) throw new Error()
+    invoices.value = await res.json()
+  } catch {
+    apiError.value = true
+  } finally {
+    loading.value = false
+  }
+})
+
+function reprint(inv: SavedInvoice) {
+  generateInvoice(inv.items, inv.business, inv.customer, inv.invoiceNo, inv.date)
+}
+
+async function deleteInvoice(inv: SavedInvoice) {
+  if (!confirm(`Delete ${inv.invoiceNo}? This cannot be undone.`)) return
+  await fetch(`/api/invoices/${encodeURIComponent(inv.invoiceNo)}`, { method: 'DELETE' })
+  invoices.value = invoices.value.filter(i => i.invoiceNo !== inv.invoiceNo)
+}
+</script>
+
+<template>
+  <div class="history">
+    <p class="panel-heading">📋 Invoice History</p>
+
+    <div v-if="loading" class="status-msg">Loading…</div>
+
+    <div v-else-if="apiError" class="status-msg warn">
+      Could not connect to the API. Invoice history is only available when running via Docker.
+    </div>
+
+    <div v-else-if="invoices.length === 0" class="status-msg">
+      No invoices saved yet.
+    </div>
+
+    <div v-else class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Invoice #</th>
+            <th>Date</th>
+            <th>Customer</th>
+            <th class="amount">Total</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="inv in invoices" :key="inv.invoiceNo">
+            <td class="inv-no">{{ inv.invoiceNo }}</td>
+            <td>{{ inv.date }}</td>
+            <td>{{ inv.customer }}</td>
+            <td class="amount">£{{ Number(inv.grandTotal).toFixed(2) }}</td>
+            <td class="actions-cell">
+              <button class="btn-reprint" @click="reprint(inv)">🖨️ Reprint</button>
+              <button class="btn-delete" @click="deleteInvoice(inv)" title="Delete">🗑️</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</template>
+
+<style scoped>
+.history {
+  width: 100%;
+}
+
+.status-msg {
+  color: #a0a0b0;
+  font-size: 0.9rem;
+  padding: 24px 0;
+  text-align: center;
+}
+
+.status-msg.warn {
+  color: #e9a020;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+thead tr {
+  background: #1a1a2e;
+}
+
+thead th {
+  padding: 10px 14px;
+  text-align: left;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #a0b0c8;
+  white-space: nowrap;
+}
+
+tbody tr {
+  border-bottom: 1px solid #1a3a5a;
+  transition: background 0.1s;
+}
+
+tbody tr:hover {
+  background: #0f2a45;
+}
+
+tbody td {
+  padding: 10px 14px;
+  color: #c8d0e0;
+}
+
+.inv-no {
+  font-family: monospace;
+  color: #e94560;
+  font-weight: 600;
+}
+
+.amount {
+  text-align: right;
+  font-weight: 600;
+  color: #4caf50;
+}
+
+.btn-reprint {
+  padding: 5px 14px;
+  background: #1a4a7a;
+  color: #e0e8f0;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+
+.btn-reprint:hover {
+  background: #e94560;
+  color: #fff;
+}
+
+.actions-cell {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.btn-delete {
+  padding: 5px 10px;
+  background: none;
+  border: 1px solid #3a2a3a;
+  border-radius: 6px;
+  color: #e94560;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btn-delete:hover {
+  background: #e94560;
+  color: #fff;
+  border-color: #e94560;
+}
+</style>

@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "server:dev": "cross-env PORT=3001 DATA_DIR=C:/docker/3d-print-calc/data node server.cjs",
+    "dev:full": "run-p dev server:dev",
     "build": "run-p type-check \"build-only {@}\" --",
     "preview": "vite preview",
     "test:unit": "vitest",
@@ -16,6 +18,7 @@
     "lint:eslint": "eslint . --fix --cache"
   },
   "dependencies": {
+    "express": "^4.22.2",
     "pinia": "^3.0.4",
     "vue": "^3.5.32",
     "vue-router": "^5.0.4"
@@ -31,6 +34,7 @@
     "@vue/eslint-config-typescript": "^14.7.0",
     "@vue/test-utils": "^2.4.6",
     "@vue/tsconfig": "^0.9.1",
+    "cross-env": "^10.1.0",
     "eslint": "^10.2.1",
     "eslint-plugin-oxlint": "~1.60.0",
     "eslint-plugin-playwright": "^2.10.1",

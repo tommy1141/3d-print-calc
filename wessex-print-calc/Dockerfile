@@ -7,8 +7,13 @@ RUN pnpm install --frozen-lockfile
 COPY . .
 RUN pnpm run build-only
 
-# Stage 2 – serve with nginx
-FROM nginx:stable-alpine
-COPY --from=builder /app/dist /usr/share/nginx/html
+# Stage 2 – serve with Express (static files + invoice API)
+FROM node:22-alpine
+RUN npm install -g pnpm
+WORKDIR /app
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --prod --frozen-lockfile
+COPY --from=builder /app/dist ./dist
+COPY server.cjs .
 EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["node", "server.cjs"]

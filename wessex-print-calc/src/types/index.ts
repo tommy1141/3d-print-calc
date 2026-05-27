@@ -1,4 +1,21 @@
-export type NavView = 'calculator' | 'setup' | 'materials' | 'invoice'
+export type NavView = 'calculator' | 'setup' | 'materials' | 'invoice' | 'invoices' | 'stats'
+
+export interface SavedInvoice {
+  invoiceNo: string
+  date: string
+  business: string
+  customer: string
+  items: {
+    job: string
+    sellingPrice: number
+    filamentCost?: number
+    powerCost?: number
+    labourCost?: number
+    profit?: number
+  }[]
+  grandTotal: number
+  savedAt: string
+}
 
 export interface InvItem {
   job: string
@@ -26,4 +43,5 @@ export interface CalcResult {
   sellingPrice: number
   profit: number
   breakdown: string
+  actualProfit?: number
 }

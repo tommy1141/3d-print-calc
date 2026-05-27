@@ -13,6 +13,7 @@ const printHours = defineModel<number | null>('printHours')
 const printMins  = defineModel<number | null>('printMins')
 const labourMins = defineModel<number | null>('labourMins')
 const jobDesc    = defineModel<string>('jobDesc')
+const customerName = defineModel<string>('customerName')
 </script>
 
 <template>
@@ -79,6 +80,14 @@ const jobDesc    = defineModel<string>('jobDesc')
       type="text"
       placeholder="e.g. Custom bracket — 150g PLA"
       v-model="jobDesc"
+    />
+
+    <InputField
+      id="customerName"
+      label="Customer name"
+      type="text"
+      placeholder="e.g. John Smith"
+      v-model="customerName"
     />
 
     <button class="btn-calculate" @click="emit('calculate')">Calculate Total Cost</button>

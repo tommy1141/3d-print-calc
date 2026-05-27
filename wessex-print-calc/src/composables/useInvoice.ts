@@ -47,6 +47,9 @@ export function useInvoice() {
     customer: string,
     invoiceNo: string,
     date: string,
+    customerEmail?: string,
+    customerPhone?: string,
+    customerAddress?: string,
   ) {
     const biz        = escHtml(business || 'My 3D Print Shop')
     const cust       = escHtml(customer || 'Customer')
@@ -64,6 +67,13 @@ export function useInvoice() {
     const sc      = sortCode.value.trim()
     const accNo   = accountNumber.value.trim()
     const hasBankDetails = bnk || accNo
+
+    const custAddr  = (customerAddress ?? '').trim()
+    const custEmail = (customerEmail   ?? '').trim()
+    const custPhone = (customerPhone   ?? '').trim()
+    const custAddrHtml  = custAddr  ? `<div class="party-detail" style="white-space:pre-line">${escHtml(custAddr)}</div>` : ''
+    const custEmailHtml = custEmail ? `<div class="party-detail">${escHtml(custEmail)}</div>` : ''
+    const custPhoneHtml = custPhone ? `<div class="party-detail">${escHtml(custPhone)}</div>` : ''
 
     const addrHtml    = addr    ? `<div class="party-detail">${escHtml(addr)}</div>` : ''
     const emailHtml   = eml     ? `<div class="party-detail">${escHtml(eml)}</div>` : ''
@@ -103,7 +113,7 @@ export function useInvoice() {
   </div>
   <div class="parties">
     <div class="party"><h3>From</h3><p>${biz}</p>${addrHtml}${emailHtml}${phoneHtml}</div>
-    <div class="party"><h3>Bill To</h3><p>${cust}</p></div>
+    <div class="party"><h3>Bill To</h3><p>${cust}</p>${custAddrHtml}${custEmailHtml}${custPhoneHtml}</div>
   </div>
   <table>
     <thead><tr><th>Description</th><th class="amount">&pound; Amount</th></tr></thead>

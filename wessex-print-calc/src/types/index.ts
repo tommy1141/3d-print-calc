@@ -1,10 +1,20 @@
 export type NavView = 'calculator' | 'setup' | 'materials' | 'invoice' | 'invoices' | 'stats'
 
+export interface CustomerContact {
+  name: string
+  email?: string
+  phone?: string
+  address?: string
+}
+
 export interface SavedInvoice {
   invoiceNo: string
   date: string
   business: string
   customer: string
+  customerEmail?: string
+  customerPhone?: string
+  customerAddress?: string
   items: {
     job: string
     sellingPrice: number

@@ -2,7 +2,10 @@
 import InputField from '@/components/InputField.vue'
 import { useFilaments, FILAMENT_LABELS, FILAMENT_KEYS } from '@/composables/useFilaments'
 
-defineProps<{ showError: boolean }>()
+defineProps<{
+  showError: boolean
+  customerOptions: string[]
+}>()
 
 const emit = defineEmits<{ calculate: [] }>()
 
@@ -12,8 +15,11 @@ const printGrams = defineModel<number | null>('printGrams')
 const printHours = defineModel<number | null>('printHours')
 const printMins  = defineModel<number | null>('printMins')
 const labourMins = defineModel<number | null>('labourMins')
-const jobDesc    = defineModel<string>('jobDesc')
-const customerName = defineModel<string>('customerName')
+const jobDesc         = defineModel<string>('jobDesc')
+const customerName    = defineModel<string>('customerName')
+const customerEmail   = defineModel<string>('customerEmail')
+const customerPhone   = defineModel<string>('customerPhone')
+const customerAddress = defineModel<string>('customerAddress')
 </script>
 
 <template>
@@ -82,13 +88,54 @@ const customerName = defineModel<string>('customerName')
       v-model="jobDesc"
     />
 
-    <InputField
-      id="customerName"
-      label="Customer name"
-      type="text"
-      placeholder="e.g. John Smith"
-      v-model="customerName"
-    />
+    <div class="field-wrapper">
+      <label for="customerName">Customer name</label>
+      <input
+        id="customerName"
+        class="text-input"
+        type="text"
+        list="savedCustomers"
+        placeholder="e.g. John Smith"
+        v-model="customerName"
+      />
+      <datalist id="savedCustomers">
+        <option v-for="customer in customerOptions" :key="customer" :value="customer" />
+      </datalist>
+    </div>
+
+    <div class="contact-row">
+      <div class="field-wrapper">
+        <label for="customerEmail">Email</label>
+        <input
+          id="customerEmail"
+          class="text-input"
+          type="text"
+          placeholder="e.g. john@example.com"
+          v-model="customerEmail"
+        />
+      </div>
+      <div class="field-wrapper">
+        <label for="customerPhone">Phone</label>
+        <input
+          id="customerPhone"
+          class="text-input"
+          type="text"
+          placeholder="e.g. 07700 900123"
+          v-model="customerPhone"
+        />
+      </div>
+    </div>
+
+    <div class="field-wrapper">
+      <label for="customerAddress">Address</label>
+      <textarea
+        id="customerAddress"
+        class="text-input address-input"
+        placeholder="123 Main Street&#10;Bristol&#10;BS1 1AA"
+        rows="3"
+        v-model="customerAddress"
+      />
+    </div>
 
     <button class="btn-calculate" @click="emit('calculate')">Calculate Total Cost</button>
 
@@ -157,5 +204,51 @@ const customerName = defineModel<string>('customerName')
   font-size: 0.82rem;
   margin-top: 10px;
   text-align: center;
+}
+
+.contact-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 1rem;
+}
+
+@media (max-width: 480px) {
+  .contact-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.address-input {
+  resize: vertical;
+  min-height: 72px;
+  font-family: inherit;
+}
+
+.field-wrapper {
+  margin-bottom: 20px;
+}
+
+.field-wrapper label {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 500;
+  margin-bottom: 6px;
+  color: #e0e0f0;
+}
+
+.text-input {
+  width: 100%;
+  padding: 12px 16px;
+  background: #0f3460;
+  border: 1px solid #1a4a7a;
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 1rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.text-input:focus {
+  border-color: #e94560;
 }
 </style>

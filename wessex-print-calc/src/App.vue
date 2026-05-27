@@ -14,7 +14,7 @@ import InvoiceHistory    from '@/components/InvoiceHistory.vue'
 import StatsView         from '@/components/StatsView.vue'
 import { useFilaments }   from '@/composables/useFilaments'
 import { useCompany }    from '@/composables/useCompany'
-import type { NavView } from '@/types'
+import type { NavView, CustomerContact } from '@/types'
 
 const activeView = ref<NavView>('calculator')
 
@@ -28,7 +28,55 @@ const {
 const businessName = ref(localStorage.getItem('business-name') ?? '')
 watch(businessName, val => localStorage.setItem('business-name', val))
 
-const customerName = ref('')
+const customerName    = ref('')
+const customerEmail   = ref('')
+const customerPhone   = ref('')
+const customerAddress = ref('')
+const customerList    = ref<CustomerContact[]>([])
+
+function normalizeCustomerName(name: string) {
+  return name.trim().replace(/\s+/g, ' ')
+}
+
+function normalizeCustomerList(items: unknown[]): CustomerContact[] {
+  const seen = new Set<string>()
+  const result: CustomerContact[] = []
+  for (const item of items) {
+    const rawName = typeof item === 'string' ? item : (item as CustomerContact)?.name
+    if (!rawName || typeof rawName !== 'string') continue
+    const cleaned = normalizeCustomerName(rawName)
+    if (!cleaned) continue
+    const key = cleaned.toLowerCase()
+    if (seen.has(key)) continue
+    seen.add(key)
+    result.push({
+      name:    cleaned,
+      email:   typeof item === 'object' && item !== null ? (item as CustomerContact).email   : undefined,
+      phone:   typeof item === 'object' && item !== null ? (item as CustomerContact).phone   : undefined,
+      address: typeof item === 'object' && item !== null ? (item as CustomerContact).address : undefined,
+    })
+  }
+  return result.sort((a, b) => a.name.localeCompare(b.name))
+}
+
+function rememberCustomer(contact: CustomerContact) {
+  if (!contact.name) return
+  const idx = customerList.value.findIndex(c => c.name.toLowerCase() === contact.name.toLowerCase())
+  if (idx >= 0) {
+    customerList.value[idx] = { ...customerList.value[idx], ...contact }
+  } else {
+    customerList.value = [...customerList.value, contact].sort((a, b) => a.name.localeCompare(b.name))
+  }
+}
+
+watch(customerName, newName => {
+  const match = customerList.value.find(c => c.name.toLowerCase() === newName.trim().toLowerCase())
+  if (match) {
+    customerEmail.value   = match.email   ?? ''
+    customerPhone.value   = match.phone   ?? ''
+    customerAddress.value = match.address ?? ''
+  }
+})
 
 const { invItems, listTotal, addItem, removeItem, clearAll } = useOrderList()
 const { generateInvoice } = useInvoice()
@@ -47,6 +95,7 @@ function _saveSettings() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         businessName: businessName.value,
+        customerList: customerList.value,
         wattage:      wattage.value,
         ratePerKwh:   ratePerKwh.value,
         labourRate:   labourRate.value,
@@ -66,12 +115,16 @@ function _saveSettings() {
   }, 500)
 }
 watch([businessName, wattage, ratePerKwh, labourRate, margin, selectedType, cAddr, cEmail, cPhone, cBankName, cAccountName, cSortCode, cAccountNo], _saveSettings)
+watch(customerList, _saveSettings, { deep: true })
 watch([prices, costPrices], _saveSettings, { deep: true })
 onMounted(async () => {
   try {
     const res  = await fetch('/api/settings')
     const data = await res.json()
     if (data.businessName   !== undefined) businessName.value   = data.businessName
+    if (Array.isArray(data.customerList)) {
+      customerList.value = normalizeCustomerList(data.customerList)
+    }
     if (data.wattage        !== undefined) wattage.value        = data.wattage
     if (data.ratePerKwh     !== undefined) ratePerKwh.value     = data.ratePerKwh
     if (data.labourRate     !== undefined) labourRate.value     = data.labourRate
@@ -105,13 +158,23 @@ async function onInvoice() {
     alert('Please add at least one item to the order first.')
     return
   }
+  const normalizedCustomer = normalizeCustomerName(customerName.value)
+  if (normalizedCustomer) {
+    customerName.value = normalizedCustomer
+    rememberCustomer({ name: normalizedCustomer, email: customerEmail.value || undefined, phone: customerPhone.value || undefined, address: customerAddress.value || undefined })
+  }
+  const invoiceCustomer = normalizedCustomer || 'Customer'
+
   try {
     const res  = await fetch('/api/invoices', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        business:   businessName.value || 'My 3D Print Shop',
-        customer:   customerName.value || 'Customer',
+        business:        businessName.value || 'My 3D Print Shop',
+        customer:        invoiceCustomer,
+        customerEmail:   customerEmail.value   || undefined,
+        customerPhone:   customerPhone.value   || undefined,
+        customerAddress: customerAddress.value || undefined,
         items:      invItems.value.map(i => ({
         job:          i.job,
         sellingPrice: i.sellingPrice,
@@ -135,7 +198,7 @@ async function onInvoice() {
 }
 
 function onPrintInvoice() {
-  generateInvoice(invItems.value, businessName.value, customerName.value, invoiceNo.value, invoiceDate.value)
+  generateInvoice(invItems.value, businessName.value, customerName.value, invoiceNo.value, invoiceDate.value, customerEmail.value, customerPhone.value, customerAddress.value)
 }
 </script>
 
@@ -157,6 +220,10 @@ function onPrintInvoice() {
             v-model:labourMins="labourMins"
             v-model:jobDesc="jobDesc"
             v-model:customerName="customerName"
+            v-model:customerEmail="customerEmail"
+            v-model:customerPhone="customerPhone"
+            v-model:customerAddress="customerAddress"
+            :customer-options="customerList.map(c => c.name)"
             :show-error="showError"
             @calculate="calculate"
           />
@@ -218,6 +285,9 @@ function onPrintInvoice() {
           :items="invItems"
           :business="businessName"
           :customer="customerName"
+          :customer-email="customerEmail"
+          :customer-phone="customerPhone"
+          :customer-address="customerAddress"
           :invoice-no="invoiceNo"
           :date="invoiceDate"
           @back="activeView = 'calculator'"
@@ -228,7 +298,7 @@ function onPrintInvoice() {
       <!-- ── Invoice history ── -->
       <div v-else-if="activeView === 'invoices'" class="setup-layout">
         <div class="panel">
-          <InvoiceHistory @reprint="(inv) => generateInvoice(inv.items, inv.business, inv.customer, inv.invoiceNo, inv.date)" />
+          <InvoiceHistory @reprint="(inv) => generateInvoice(inv.items, inv.business, inv.customer, inv.invoiceNo, inv.date, inv.customerEmail, inv.customerPhone, inv.customerAddress)" />
         </div>
       </div>
 

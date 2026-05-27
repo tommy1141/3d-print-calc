@@ -71,7 +71,7 @@ const company = useCompany()
           id="businessName"
           label="Business / trading name"
           type="text"
-          placeholder="e.g. Wessex Prints"
+          placeholder="e.g. Coastal Prints"
           v-model="businessName"
         />
         <div class="field-wrapper">

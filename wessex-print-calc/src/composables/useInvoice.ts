@@ -47,6 +47,7 @@ export function useInvoice() {
     customer: string,
     invoiceNo: string,
     date: string,
+    showPaymentDetails = true,
   ) {
     const biz        = escHtml(business || 'My 3D Print Shop')
     const cust       = escHtml(customer || 'Customer')
@@ -68,7 +69,7 @@ export function useInvoice() {
     const addrHtml    = addr    ? `<div class="party-detail">${escHtml(addr)}</div>` : ''
     const emailHtml   = eml     ? `<div class="party-detail">${escHtml(eml)}</div>` : ''
     const phoneHtml   = ph      ? `<div class="party-detail">${escHtml(ph)}</div>` : ''
-    const bankSection = hasBankDetails ? `
+    const bankSection = (hasBankDetails && showPaymentDetails) ? `
   <div class="bank-section">
     <div class="bank-label">Payment Details</div>
     <div class="bank-row">

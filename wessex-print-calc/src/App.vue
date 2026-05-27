@@ -172,8 +172,8 @@ async function onInvoice() {
   activeView.value = 'invoice'
 }
 
-function onPrintInvoice() {
-  generateInvoice(invItems.value, businessName.value, customerName.value, invoiceNo.value, invoiceDate.value)
+function onPrintInvoice(showPaymentDetails: boolean) {
+  generateInvoice(invItems.value, businessName.value, customerName.value, invoiceNo.value, invoiceDate.value, showPaymentDetails)
 }
 </script>
 

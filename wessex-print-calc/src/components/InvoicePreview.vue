@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import type { InvItem } from '@/types'
 import { useCompany } from '@/composables/useCompany'
 
@@ -13,7 +13,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   back: []
-  print: []
+  print: [showPaymentDetails: boolean]
 }>()
 
 const company = useCompany()
@@ -23,6 +23,7 @@ const grandTotal = computed(() =>
 )
 
 const hasBankDetails = computed(() => !!(company.bankName.value || company.accountNumber.value))
+const showPaymentDetails = ref(true)
 </script>
 
 <template>
@@ -77,7 +78,7 @@ const hasBankDetails = computed(() => !!(company.bankName.value || company.accou
         </tr>
       </table>
 
-      <div v-if="hasBankDetails" class="bank-section">
+      <div v-if="hasBankDetails && showPaymentDetails" class="bank-section">
         <div class="bank-label">Payment Details</div>
         <div class="bank-row">
           <span v-if="company.bankName"><strong>Bank:</strong> {{ company.bankName }}</span>
@@ -93,7 +94,11 @@ const hasBankDetails = computed(() => !!(company.bankName.value || company.accou
     <!-- Actions -->
     <div class="actions">
       <button class="btn-back" @click="emit('back')">← Back to Calculator</button>
-      <button class="btn-pdf" @click="emit('print')">🖨️ Save as PDF</button>
+      <label v-if="hasBankDetails" class="payment-toggle">
+        <input type="checkbox" v-model="showPaymentDetails" />
+        Include payment details
+      </label>
+      <button class="btn-pdf" @click="emit('print', showPaymentDetails)">🖨️ Save as PDF</button>
     </div>
   </div>
 </template>
@@ -301,6 +306,17 @@ const hasBankDetails = computed(() => !!(company.bankName.value || company.accou
   display: flex;
   gap: 16px;
   justify-content: center;
+  align-items: center;
+}
+
+.payment-toggle {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #a0a0b0;
+  font-size: 0.88rem;
+  cursor: pointer;
+  user-select: none;
 }
 
 .btn-back,

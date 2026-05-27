@@ -9,6 +9,7 @@ const margin       = defineModel<number | null>('margin')
 const businessName = defineModel<string>('businessName')
 
 const company = useCompany()
+const { address, email, phone, bankName, accountName, sortCode, accountNumber } = company
 </script>
 
 <template>
@@ -81,7 +82,7 @@ const company = useCompany()
             class="address-input"
             placeholder="123 Main Street&#10;Bournemouth&#10;BH1 1AA"
             rows="3"
-            v-model="company.address"
+            v-model="address"
           />
         </div>
         <div class="contact-row">
@@ -90,14 +91,14 @@ const company = useCompany()
             label="Email"
             type="text"
             placeholder="e.g. info@myshop.com"
-            v-model="company.email"
+            v-model="email"
           />
           <InputField
             id="businessPhone"
             label="Phone"
             type="text"
             placeholder="e.g. 01202 123456"
-            v-model="company.phone"
+            v-model="phone"
           />
         </div>
         <hr class="divider" />
@@ -108,14 +109,14 @@ const company = useCompany()
             label="Bank name"
             type="text"
             placeholder="e.g. Barclays"
-            v-model="company.bankName"
+            v-model="bankName"
           />
           <InputField
             id="accountName"
             label="Account name"
             type="text"
             placeholder="e.g. John Smith"
-            v-model="company.accountName"
+            v-model="accountName"
           />
         </div>
         <div class="contact-row">
@@ -124,21 +125,21 @@ const company = useCompany()
             label="Sort code"
             type="text"
             placeholder="e.g. 12-34-56"
-            v-model="company.sortCode"
+            v-model="sortCode"
           />
           <InputField
             id="accountNumber"
             label="Account number"
             type="text"
             placeholder="e.g. 12345678"
-            v-model="company.accountNumber"
+            v-model="accountNumber"
           />
         </div>
       </div>
     </div>
 
     <p class="setup-note">
-      These settings persist across all jobs while the app is open.
+      These settings are saved to the server and will be remembered next time you open the app.
     </p>
   </div>
 </template>

@@ -1,0 +1,289 @@
+/* ── Reset ──────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* ── Base ───────────────────────────────────── */
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: #0f1628;
+  color: #c0c0d0;
+  min-height: 100vh;
+}
+
+/* ── Top header bar ─────────────────────────── */
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 200;
+  background: #111827;
+  border-bottom: 1px solid #1a3a5c;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+}
+
+.app-header-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 28px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #e94560;
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.nav-brand-icon {
+  font-size: 1.4rem;
+}
+
+/* Inline desktop nav links */
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.nav-tab {
+  padding: 8px 20px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: #7090b0;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+  width: auto;
+  margin-top: 0;
+}
+.nav-tab:hover { background: #1a3a5c; color: #c0c0d0; }
+.nav-tab:active { transform: none; }
+.nav-tab.active {
+  background: rgba(233, 69, 96, 0.15);
+  color: #e94560;
+  font-weight: 600;
+}
+
+/* Burger (mobile only) */
+.burger {
+  display: none;
+  flex-direction: column;
+  gap: 5px;
+  width: auto;
+  padding: 8px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-top: 0;
+  transition: background 0.15s;
+}
+.burger:hover  { background: rgba(233, 69, 96, 0.12); }
+.burger:active { transform: none; }
+.bar {
+  display: block;
+  width: 22px;
+  height: 2px;
+  background: #c0c0d0;
+  border-radius: 2px;
+  transition: transform 0.25s, opacity 0.2s;
+}
+.burger.open .bar:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.burger.open .bar:nth-child(2) { opacity: 0; transform: scaleX(0); }
+.burger.open .bar:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+/* Mobile dropdown */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 99;
+}
+.nav-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 16px;
+  background: #111827;
+  border: 1px solid #1a4a7a;
+  border-radius: 10px;
+  padding: 6px;
+  z-index: 100;
+  min-width: 210px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+.nav-dropdown .nav-tab {
+  width: 100%;
+  text-align: left;
+  border-radius: 7px;
+}
+
+/* ── Page main ──────────────────────────────── */
+.app-main {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 36px 28px 60px;
+}
+
+/* ── Panels (card style) ────────────────────── */
+.panel {
+  background: #16213e;
+  border-radius: 14px;
+  border: 1px solid #1a3a5c;
+  padding: 32px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.panel-heading {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #4a70a0;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 24px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #1a3a5c;
+}
+
+/* ── Calculator two-column layout ──────────── */
+.calc-layout {
+  display: grid;
+  grid-template-columns: 420px 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.results-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Empty state placeholder */
+.results-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 220px;
+  color: #3a5070;
+}
+.results-empty-icon { font-size: 3rem; }
+.results-empty p { font-size: 0.9rem; text-align: center; line-height: 1.5; }
+
+/* ── Company setup layout ───────────────────── */
+.setup-layout {
+  max-width: 820px;
+  margin: 0 auto;
+}
+
+/* ── Invoice stage layout ───────────────────── */
+.invoice-layout {
+  max-width: 820px;
+  margin: 0 auto;
+}
+
+.setup-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 40px;
+}
+
+.setup-grid-full {
+  grid-column: 1 / -1;
+}
+
+/* ── Shared form elements ───────────────────── */
+label {
+  display: block;
+  color: #c0c0d0;
+  font-size: 0.88rem;
+  margin-bottom: 6px;
+}
+
+.hint {
+  color: #4a6080;
+  font-size: 0.75rem;
+  margin-top: 5px;
+  margin-bottom: 20px;
+  line-height: 1.4;
+}
+
+.divider {
+  border: none;
+  border-top: 1px solid #1a3a5c;
+  margin: 24px 0 20px;
+}
+
+.section-title {
+  color: #6080a8;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 16px;
+}
+
+/* Duration side-by-side */
+.duration-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.duration-row > * {
+  flex: 1;
+  margin-bottom: 0 !important;
+}
+
+/* ── View transitions ───────────────────────── */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.18s, transform 0.18s;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+  transform: translateY(6px);
+}
+
+/* Slide-down for mobile dropdown */
+.slide-down-enter-active,
+.slide-down-leave-active {
+  transition: opacity 0.2s, transform 0.2s;
+}
+.slide-down-enter-from,
+.slide-down-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
+/* ── Responsive: tablet ─────────────────────── */
+@media (max-width: 820px) {
+  .calc-layout {
+    grid-template-columns: 1fr;
+  }
+  .setup-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Responsive: mobile ─────────────────────── */
+@media (max-width: 600px) {
+  .app-main { padding: 20px 16px 40px; }
+  .panel { padding: 20px; }
+  .nav-links { display: none; }
+  .burger { display: flex; }
+}
+

@@ -1,0 +1,6 @@
+services:
+  wessex-print-calc:
+    build: .
+    ports:
+      - "5123:80"
+    restart: unless-stopped

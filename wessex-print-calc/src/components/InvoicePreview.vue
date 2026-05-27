@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { InvItem } from '@/types'
+import { useCompany } from '@/composables/useCompany'
 
 const props = defineProps<{
   items: InvItem[]
@@ -15,9 +16,13 @@ const emit = defineEmits<{
   print: []
 }>()
 
+const company = useCompany()
+
 const grandTotal = computed(() =>
   props.items.reduce((s, i) => s + i.sellingPrice, 0)
 )
+
+const hasBankDetails = computed(() => !!(company.bankName.value || company.accountNumber.value))
 </script>
 
 <template>
@@ -40,6 +45,9 @@ const grandTotal = computed(() =>
         <div class="party">
           <div class="party-label">From</div>
           <div class="party-name">{{ business || 'My 3D Print Shop' }}</div>
+          <div v-if="company.address" class="party-detail" style="white-space:pre-line">{{ company.address }}</div>
+          <div v-if="company.email" class="party-detail">{{ company.email }}</div>
+          <div v-if="company.phone" class="party-detail">{{ company.phone }}</div>
         </div>
         <div class="party">
           <div class="party-label">Bill To</div>
@@ -68,6 +76,16 @@ const grandTotal = computed(() =>
           <td class="val">£{{ grandTotal.toFixed(2) }}</td>
         </tr>
       </table>
+
+      <div v-if="hasBankDetails" class="bank-section">
+        <div class="bank-label">Payment Details</div>
+        <div class="bank-row">
+          <span v-if="company.bankName"><strong>Bank:</strong> {{ company.bankName }}</span>
+          <span v-if="company.accountName"><strong>Account name:</strong> {{ company.accountName }}</span>
+          <span v-if="company.sortCode"><strong>Sort code:</strong> {{ company.sortCode }}</span>
+          <span v-if="company.accountNumber"><strong>Account no:</strong> {{ company.accountNumber }}</span>
+        </div>
+      </div>
 
       <div class="inv-footer">Thank you for your order!</div>
     </div>
@@ -235,6 +253,38 @@ const grandTotal = computed(() =>
 
 .val {
   text-align: right;
+}
+
+.party-detail {
+  font-size: 12px;
+  color: #666;
+  margin-top: 2px;
+  line-height: 1.5;
+}
+
+.bank-section {
+  margin-top: 24px;
+  padding: 12px 14px;
+  background: #f8f8fb;
+  border-radius: 6px;
+  border: 1px solid #e0e4f0;
+}
+
+.bank-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #999;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.bank-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 24px;
+  font-size: 12px;
+  color: #333;
 }
 
 .inv-footer {

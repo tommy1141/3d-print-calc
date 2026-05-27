@@ -1,3 +1,4 @@
+import { useCompany } from './useCompany'
 
 function escHtml(str: string): string {
   return str
@@ -30,6 +31,10 @@ const INVOICE_STYLES = `
   .totals .lbl { color:#555; }
   .totals .val { text-align:right; font-weight:600; }
   .totals .grand td { font-size:17px; font-weight:700; color:#e94560; border-top:2px solid #e94560; padding-top:10px; }
+  .party-detail { font-size:12px; color:#666; margin-top:2px; white-space:pre-line; }
+  .bank-section { margin-top:24px; padding:12px 14px; background:#f8f8fb; border-radius:6px; border:1px solid #e0e4f0; }
+  .bank-label { font-size:10px; text-transform:uppercase; letter-spacing:0.08em; color:#999; font-weight:600; margin-bottom:6px; }
+  .bank-row { display:flex; flex-wrap:wrap; gap:8px 24px; font-size:12px; color:#333; }
   .footer { margin-top:48px; border-top:1px solid #eee; padding-top:16px; color:#aaa; font-size:11px; text-align:center; }
   @media print { .no-print { display:none; } body { padding:24px; } }
   @page { margin: 0; }
@@ -49,6 +54,30 @@ export function useInvoice() {
     const rows       = items
       .map(item => `<tr><td>${escHtml(item.job)}</td><td class="amount">£${item.sellingPrice.toFixed(2)}</td></tr>`)
       .join('')
+
+    const { address, email, phone, bankName, accountName, sortCode, accountNumber } = useCompany()
+    const addr    = address.value.trim()
+    const eml     = email.value.trim()
+    const ph      = phone.value.trim()
+    const bnk     = bankName.value.trim()
+    const accName = accountName.value.trim()
+    const sc      = sortCode.value.trim()
+    const accNo   = accountNumber.value.trim()
+    const hasBankDetails = bnk || accNo
+
+    const addrHtml    = addr    ? `<div class="party-detail">${escHtml(addr)}</div>` : ''
+    const emailHtml   = eml     ? `<div class="party-detail">${escHtml(eml)}</div>` : ''
+    const phoneHtml   = ph      ? `<div class="party-detail">${escHtml(ph)}</div>` : ''
+    const bankSection = hasBankDetails ? `
+  <div class="bank-section">
+    <div class="bank-label">Payment Details</div>
+    <div class="bank-row">
+      ${bnk     ? `<span><strong>Bank:</strong> ${escHtml(bnk)}</span>` : ''}
+      ${accName ? `<span><strong>Account name:</strong> ${escHtml(accName)}</span>` : ''}
+      ${sc      ? `<span><strong>Sort code:</strong> ${escHtml(sc)}</span>` : ''}
+      ${accNo   ? `<span><strong>Account no:</strong> ${escHtml(accNo)}</span>` : ''}
+    </div>
+  </div>` : ''
 
     const win = window.open('', '_blank')
     if (!win) return
@@ -73,7 +102,7 @@ export function useInvoice() {
     </div>
   </div>
   <div class="parties">
-    <div class="party"><h3>From</h3><p>${biz}</p></div>
+    <div class="party"><h3>From</h3><p>${biz}</p>${addrHtml}${emailHtml}${phoneHtml}</div>
     <div class="party"><h3>Bill To</h3><p>${cust}</p></div>
   </div>
   <table>
@@ -83,6 +112,7 @@ export function useInvoice() {
   <table class="totals">
     <tr class="grand"><td class="lbl">Total Due</td><td class="val">&pound;${grandTotal.toFixed(2)}</td></tr>
   </table>
+  ${bankSection}
   <div class="footer">Thank you for your order!</div>
   <br/>
   <div class="no-print" style="text-align:center;">

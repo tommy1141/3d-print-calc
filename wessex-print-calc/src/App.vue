@@ -13,6 +13,7 @@ import InvoicePreview    from '@/components/InvoicePreview.vue'
 import InvoiceHistory    from '@/components/InvoiceHistory.vue'
 import StatsView         from '@/components/StatsView.vue'
 import { useFilaments }   from '@/composables/useFilaments'
+import { useCompany }    from '@/composables/useCompany'
 import type { NavView } from '@/types'
 
 const activeView = ref<NavView>('calculator')
@@ -32,6 +33,7 @@ const customerName = ref('')
 const { invItems, listTotal, addItem, removeItem, clearAll } = useOrderList()
 const { generateInvoice } = useInvoice()
 const { prices, costPrices, selectedType } = useFilaments()
+const { address: cAddr, email: cEmail, phone: cPhone, bankName: cBankName, accountName: cAccountName, sortCode: cSortCode, accountNumber: cAccountNo } = useCompany()
 
 // Cross-device settings sync — loads from server on mount, saves on change
 let _settingsReady = false
@@ -52,11 +54,18 @@ function _saveSettings() {
         filamentPrices:     prices.value,
         filamentCostPrices: costPrices.value,
         filamentType:       selectedType.value,
+        companyAddress:     cAddr.value,
+        companyEmail:       cEmail.value,
+        companyPhone:       cPhone.value,
+        companyBankName:    cBankName.value,
+        companyAccountName: cAccountName.value,
+        companySortCode:    cSortCode.value,
+        companyAccountNo:   cAccountNo.value,
       }),
     }).catch(() => {})
   }, 500)
 }
-watch([businessName, wattage, ratePerKwh, labourRate, margin, selectedType], _saveSettings)
+watch([businessName, wattage, ratePerKwh, labourRate, margin, selectedType, cAddr, cEmail, cPhone, cBankName, cAccountName, cSortCode, cAccountNo], _saveSettings)
 watch([prices, costPrices], _saveSettings, { deep: true })
 onMounted(async () => {
   try {
@@ -70,6 +79,13 @@ onMounted(async () => {
     if (data.filamentPrices     !== undefined) prices.value         = data.filamentPrices
     if (data.filamentCostPrices !== undefined) costPrices.value     = data.filamentCostPrices
     if (data.filamentType       !== undefined) selectedType.value   = data.filamentType
+    if (data.companyAddress     !== undefined) cAddr.value          = data.companyAddress
+    if (data.companyEmail       !== undefined) cEmail.value         = data.companyEmail
+    if (data.companyPhone       !== undefined) cPhone.value         = data.companyPhone
+    if (data.companyBankName    !== undefined) cBankName.value      = data.companyBankName
+    if (data.companyAccountName !== undefined) cAccountName.value   = data.companyAccountName
+    if (data.companySortCode    !== undefined) cSortCode.value      = data.companySortCode
+    if (data.companyAccountNo   !== undefined) cAccountNo.value     = data.companyAccountNo
     await nextTick()
   } catch { /* keep localStorage values if API unavailable */ }
   _settingsReady = true

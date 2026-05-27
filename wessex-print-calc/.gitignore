@@ -41,6 +41,12 @@ __screenshots__/
 test-results/
 playwright-report/
 
+# Compiled TypeScript config outputs (tracked .ts files are the source)
+eslint.config.js
+playwright.config.js
+vite.config.js
+vitest.config.js
+
 # Environment and secrets
 .env
 .env.*
@@ -49,6 +55,8 @@ playwright-report/
 *.key
 *.crt
 *.pfx
+*.p12
+*.jks
 
 # Runtime/app data
 data/

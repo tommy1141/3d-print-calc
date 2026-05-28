@@ -7,6 +7,7 @@ export interface FilamentSpool {
   customName: string   // brand / variant, e.g. "Bambu PLA+ Matte"
   colour: string
   grams: number        // remaining grams (1 roll = 1000 g)
+  pricePaid: number    // total purchase cost for this spool entry
 }
 
 export interface PartDefinition {
@@ -18,6 +19,7 @@ export interface PartDefinition {
   printMinsPerUnit: number
   labourMinsPerUnit: number
   batchSize: number
+  batchFilamentGrams?: number  // total grams for one full batch run (overrides gramsPerUnit × batchSize for deduction)
   inStock: number
 }
 
@@ -39,12 +41,39 @@ watch(parts,  v => localStorage.setItem('inv-part-defs', JSON.stringify(v)), { d
 export function useInventory() {
   // ── Filament spools ──────────────────────────────────────────────
   function addSpool(data: Omit<FilamentSpool, 'id'>) {
-    spools.value.unshift({ id: uid(), ...data })
+    // If same type + brand + colour already exists, merge grams and cost into it
+    const existing = spools.value.find(s =>
+      s.type === data.type &&
+      s.customName === data.customName &&
+      s.colour.toLowerCase() === data.colour.toLowerCase()
+    )
+    if (existing) {
+      existing.grams     += data.grams
+      existing.pricePaid += data.pricePaid
+    } else {
+      spools.value.unshift({ id: uid(), ...data })
+    }
   }
 
   function updateSpoolGrams(id: string, grams: number) {
     const s = spools.value.find(s => s.id === id)
     if (s) s.grams = Math.max(0, grams)
+  }
+
+  function updateSpool(id: string, data: Omit<FilamentSpool, 'id'>) {
+    const s = spools.value.find(s => s.id === id)
+    if (!s) return
+    Object.assign(s, { ...data, grams: Math.max(0, data.grams) })
+  }
+
+  /** Set a spool's remaining rolls, scaling pricePaid proportionally. */
+  function setSpoolRolls(id: string, rolls: number) {
+    const s = spools.value.find(s => s.id === id)
+    if (!s) return
+    const newGrams = Math.max(0, rolls * 1000)
+    const ratio = s.grams > 0 ? newGrams / s.grams : 0
+    s.pricePaid = Math.round(s.pricePaid * ratio * 100) / 100
+    s.grams = newGrams
   }
 
   function deleteSpool(id: string) {
@@ -86,7 +115,15 @@ export function useInventory() {
     const part = parts.value.find(p => p.id === partId)
     if (!part) return
     part.inStock += part.batchSize
-    deductFilament(part.filamentType, part.gramsPerUnit * part.batchSize)
+    // Use explicit batch filament total if set, otherwise estimate from per-unit grams
+    deductFilament(part.filamentType, part.batchFilamentGrams ?? part.gramsPerUnit * part.batchSize)
+  }
+
+  /** Update an existing part definition (preserves id and inStock). */
+  function updatePart(id: string, data: Omit<PartDefinition, 'id' | 'inStock'>) {
+    const p = parts.value.find(p => p.id === id)
+    if (!p) return
+    Object.assign(p, data)
   }
 
   /** Deduct qty from a part's stock (called when invoiced). */
@@ -96,8 +133,8 @@ export function useInventory() {
   }
 
   return {
-    spools, parts,
-    addSpool, updateSpoolGrams, deleteSpool, deductFilament, availableGrams,
+    spools, parts, updatePart,
+    addSpool, updateSpoolGrams, updateSpool, setSpoolRolls, deleteSpool, deductFilament, availableGrams,
     addPart, updatePartStock, deletePart, printBatch, deductPartStock,
   }
 }

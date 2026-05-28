@@ -11,6 +11,8 @@ export const FILAMENT_LABELS: Record<FilamentType, string> = {
 
 export const FILAMENT_KEYS: FilamentType[] = ['pla_plus', 'petg', 'abs', 'tpu']
 
+const DEFAULT_BRANDS = ['Bambu Labs', 'Sunlu']
+
 // Module-level shared state — persisted to localStorage
 const _storedPrices = localStorage.getItem('filament-prices')
 const prices = ref<Record<FilamentType, number | null>>(
@@ -28,8 +30,27 @@ const costPrices = ref<Record<FilamentType, number | null>>(
 )
 watch(costPrices, val => localStorage.setItem('filament-cost-prices', JSON.stringify(val)), { deep: true })
 
+const _storedBrands = localStorage.getItem('filament-brands')
+const brands = ref<string[]>(_storedBrands ? JSON.parse(_storedBrands) : [...DEFAULT_BRANDS])
+watch(brands, val => localStorage.setItem('filament-brands', JSON.stringify(val)), { deep: true })
+
+const _storedBrandCostPrices = localStorage.getItem('brand-cost-prices')
+const brandCostPrices = ref<Record<string, number | null>>(_storedBrandCostPrices ? JSON.parse(_storedBrandCostPrices) : {})
+watch(brandCostPrices, val => localStorage.setItem('brand-cost-prices', JSON.stringify(val)), { deep: true })
+
 export function useFilaments() {
   const selectedPrice     = computed(() => prices.value[selectedType.value])
   const selectedCostPrice = computed(() => costPrices.value[selectedType.value])
-  return { prices, costPrices, selectedType, selectedPrice, selectedCostPrice }
+
+  function addBrand(name: string) {
+    const n = name.trim()
+    if (n && !brands.value.includes(n)) brands.value.push(n)
+  }
+
+  function removeBrand(name: string) {
+    brands.value = brands.value.filter(b => b !== name)
+    delete brandCostPrices.value[name]
+  }
+
+  return { prices, costPrices, selectedType, selectedPrice, selectedCostPrice, brands, brandCostPrices, addBrand, removeBrand }
 }

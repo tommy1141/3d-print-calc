@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import type { SavedInvoice } from '@/types'
+import { useInventory } from '@/composables/useInventory'
 
 const invoices = ref<SavedInvoice[]>([])
 const loading  = ref(true)
 const apiError = ref(false)
+
+const { spools } = useInventory()
 
 onMounted(async () => {
   try {
@@ -25,11 +28,14 @@ const totalFilament = computed(() => invoices.value.reduce((s, inv) => s + inv.i
 const totalPower    = computed(() => invoices.value.reduce((s, inv) => s + inv.items.reduce((a, i) => a + (i.powerCost ?? 0), 0), 0))
 const totalLabour   = computed(() => invoices.value.reduce((s, inv) => s + inv.items.reduce((a, i) => a + (i.labourCost ?? 0), 0), 0))
 // Labour is your own time = income, not an out-of-pocket cost
-const totalTakeHome = computed(() => totalMarkupProfit.value + totalLabour.value)
+// Filament purchased is a real out-of-pocket expense, deducted from take-home
+const totalTakeHome = computed(() => totalMarkupProfit.value + totalLabour.value - totalStockInvested.value)
 const totalCost     = computed(() => totalFilament.value + totalPower.value)
 const avgMargin     = computed(() => totalRevenue.value > 0 ? (totalTakeHome.value / totalRevenue.value) * 100 : 0)
+// Total money spent purchasing filament spools (from inventory)
+const totalStockInvested = computed(() => spools.value.reduce((s, sp) => s + (sp.pricePaid ?? 0), 0))
 
-const fmt = (n: number) => `£${n.toFixed(2)}`
+const fmt = (n: number) => n < 0 ? `-£${Math.abs(n).toFixed(2)}` : `£${n.toFixed(2)}`
 </script>
 
 <template>
@@ -50,7 +56,7 @@ const fmt = (n: number) => `£${n.toFixed(2)}`
           <span class="stat-label">Total Revenue</span>
           <span class="stat-value">{{ fmt(totalRevenue) }}</span>
         </div>
-        <div class="stat-card profit">
+        <div class="stat-card profit" :class="{ negative: totalTakeHome < 0 }">
           <span class="stat-icon">📈</span>
           <span class="stat-label">Take-Home</span>
           <span class="stat-value">{{ fmt(totalTakeHome) }}</span>
@@ -86,6 +92,10 @@ const fmt = (n: number) => `£${n.toFixed(2)}`
         <div class="breakdown-row take-home-row">
           <span>📈 Markup Profit</span>
           <span>{{ fmt(totalMarkupProfit) }}</span>
+        </div>
+        <div v-if="totalStockInvested > 0" class="breakdown-row stock-row">
+          <span>📦 Filament Purchased</span>
+          <span>{{ fmt(totalStockInvested) }}</span>
         </div>
       </div>
 
@@ -123,6 +133,8 @@ const fmt = (n: number) => `£${n.toFixed(2)}`
 
 .stat-card.revenue { border-color: #4caf50; }
 .stat-card.profit  { border-color: #2196f3; }
+.stat-card.profit.negative { border-color: #e94560; }
+.stat-card.profit.negative .stat-value { color: #e94560; }
 .stat-card.cost    { border-color: #ff9800; }
 .stat-card.invoices{ border-color: #9c27b0; }
 
@@ -155,6 +167,15 @@ const fmt = (n: number) => `£${n.toFixed(2)}`
 
 .take-home-row span:last-child {
   color: #2196f3;
+}
+
+.stock-row {
+  background: color-mix(in srgb, #ff9800 10%, var(--color-background-soft, #f8f8f8));
+  border: 1px solid color-mix(in srgb, #ff9800 30%, transparent);
+}
+
+.stock-row span:last-child {
+  color: #e65100;
 }
 
 .status-msg {

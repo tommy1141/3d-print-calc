@@ -53,6 +53,11 @@ body {
   display: flex;
   align-items: center;
   gap: 4px;
+  flex: 1;
+}
+
+.nav-tab--right {
+  margin-left: auto;
 }
 
 .nav-tab {

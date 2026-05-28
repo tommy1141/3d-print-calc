@@ -1,4 +1,4 @@
-export type NavView = 'calculator' | 'setup' | 'materials' | 'invoice' | 'invoices' | 'stats'
+export type NavView = 'inventory' | 'calculator' | 'setup' | 'materials' | 'invoice' | 'invoices' | 'stats'
 
 export interface SavedInvoice {
   invoiceNo: string

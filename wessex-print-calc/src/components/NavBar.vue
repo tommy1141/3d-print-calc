@@ -26,10 +26,10 @@ function go(view: NavView) {
       <nav class="nav-links">
         <button
           class="nav-tab"
-          :class="{ active: activeView === 'calculator' }"
-          @click="go('calculator')"
+          :class="{ active: activeView === 'inventory' }"
+          @click="go('inventory')"
         >
-          📐 Cost Calculator
+          📦 Inventory
         </button>
         <button
           class="nav-tab"
@@ -40,10 +40,10 @@ function go(view: NavView) {
         </button>
         <button
           class="nav-tab"
-          :class="{ active: activeView === 'setup' }"
-          @click="go('setup')"
+          :class="{ active: activeView === 'calculator' }"
+          @click="go('calculator')"
         >
-          ⚙️ Company Setup
+          🧾 Invoicing
         </button>
         <button
           class="nav-tab"
@@ -58,6 +58,13 @@ function go(view: NavView) {
           @click="go('stats')"
         >
           📈 Stats
+        </button>
+        <button
+          class="nav-tab nav-tab--right"
+          :class="{ active: activeView === 'setup' }"
+          @click="go('setup')"
+        >
+          ⚙️ Company Setup
         </button>
       </nav>
 
@@ -79,10 +86,10 @@ function go(view: NavView) {
         <nav v-if="mobileOpen" class="nav-dropdown">
           <button
             class="nav-tab"
-            :class="{ active: activeView === 'calculator' }"
-            @click="go('calculator')"
+            :class="{ active: activeView === 'inventory' }"
+            @click="go('inventory')"
           >
-            📐 Cost Calculator
+            📦 Inventory
           </button>
           <button
             class="nav-tab"
@@ -93,10 +100,10 @@ function go(view: NavView) {
           </button>
           <button
             class="nav-tab"
-            :class="{ active: activeView === 'setup' }"
-            @click="go('setup')"
+            :class="{ active: activeView === 'calculator' }"
+            @click="go('calculator')"
           >
-            ⚙️ Company Setup
+            🧾 Invoicing
           </button>
           <button
             class="nav-tab"
@@ -111,6 +118,13 @@ function go(view: NavView) {
             @click="go('stats')"
           >
             📈 Stats
+          </button>
+          <button
+            class="nav-tab"
+            :class="{ active: activeView === 'setup' }"
+            @click="go('setup')"
+          >
+            ⚙️ Company Setup
           </button>
         </nav>
       </Transition>

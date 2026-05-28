@@ -20,12 +20,14 @@ onMounted(async () => {
 
 const invoiceCount  = computed(() => invoices.value.length)
 const totalRevenue  = computed(() => invoices.value.reduce((s, inv) => s + inv.grandTotal, 0))
-const totalProfit   = computed(() => invoices.value.reduce((s, inv) => s + inv.items.reduce((a, i) => a + (i.profit ?? 0), 0), 0))
+const totalMarkupProfit = computed(() => invoices.value.reduce((s, inv) => s + inv.items.reduce((a, i) => a + (i.profit ?? 0), 0), 0))
 const totalFilament = computed(() => invoices.value.reduce((s, inv) => s + inv.items.reduce((a, i) => a + (i.filamentCost ?? 0), 0), 0))
 const totalPower    = computed(() => invoices.value.reduce((s, inv) => s + inv.items.reduce((a, i) => a + (i.powerCost ?? 0), 0), 0))
 const totalLabour   = computed(() => invoices.value.reduce((s, inv) => s + inv.items.reduce((a, i) => a + (i.labourCost ?? 0), 0), 0))
-const totalCost     = computed(() => totalFilament.value + totalPower.value + totalLabour.value)
-const avgMargin     = computed(() => totalRevenue.value > 0 ? (totalProfit.value / totalRevenue.value) * 100 : 0)
+// Labour is your own time = income, not an out-of-pocket cost
+const totalTakeHome = computed(() => totalMarkupProfit.value + totalLabour.value)
+const totalCost     = computed(() => totalFilament.value + totalPower.value)
+const avgMargin     = computed(() => totalRevenue.value > 0 ? (totalTakeHome.value / totalRevenue.value) * 100 : 0)
 
 const fmt = (n: number) => `£${n.toFixed(2)}`
 </script>
@@ -50,9 +52,9 @@ const fmt = (n: number) => `£${n.toFixed(2)}`
         </div>
         <div class="stat-card profit">
           <span class="stat-icon">📈</span>
-          <span class="stat-label">Total Profit</span>
-          <span class="stat-value">{{ fmt(totalProfit) }}</span>
-          <span class="stat-sub">{{ avgMargin.toFixed(1) }}% avg margin</span>
+          <span class="stat-label">Take-Home</span>
+          <span class="stat-value">{{ fmt(totalTakeHome) }}</span>
+          <span class="stat-sub">{{ avgMargin.toFixed(1) }}% of revenue</span>
         </div>
         <div class="stat-card cost">
           <span class="stat-icon">🧾</span>
@@ -67,7 +69,7 @@ const fmt = (n: number) => `£${n.toFixed(2)}`
       </div>
 
       <!-- Cost breakdown -->
-      <p class="section-title" style="margin-top: 1.5rem;">Cost Breakdown</p>
+      <p class="section-title" style="margin-top: 1.5rem;">Breakdown</p>
       <div class="breakdown-list">
         <div class="breakdown-row">
           <span>🧵 Filament</span>
@@ -77,9 +79,13 @@ const fmt = (n: number) => `£${n.toFixed(2)}`
           <span>⚡ Power</span>
           <span>{{ fmt(totalPower) }}</span>
         </div>
-        <div class="breakdown-row">
-          <span>👷 Labour</span>
+        <div class="breakdown-row take-home-row">
+          <span>👷 Your Labour Pay</span>
           <span>{{ fmt(totalLabour) }}</span>
+        </div>
+        <div class="breakdown-row take-home-row">
+          <span>📈 Markup Profit</span>
+          <span>{{ fmt(totalMarkupProfit) }}</span>
         </div>
       </div>
 
@@ -140,6 +146,15 @@ const fmt = (n: number) => `£${n.toFixed(2)}`
 .breakdown-row span:last-child {
   font-weight: 600;
   font-variant-numeric: tabular-nums;
+}
+
+.take-home-row {
+  background: color-mix(in srgb, #2196f3 12%, var(--color-background-soft, #f8f8f8));
+  border: 1px solid color-mix(in srgb, #2196f3 30%, transparent);
+}
+
+.take-home-row span:last-child {
+  color: #2196f3;
 }
 
 .status-msg {

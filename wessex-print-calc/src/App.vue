@@ -12,7 +12,11 @@ import OrderList         from '@/components/OrderList.vue'
 import InvoicePreview    from '@/components/InvoicePreview.vue'
 import InvoiceHistory    from '@/components/InvoiceHistory.vue'
 import StatsView         from '@/components/StatsView.vue'
+import InventoryView     from '@/components/InventoryView.vue'
+import StockJobForm      from '@/components/StockJobForm.vue'
 import { useFilaments }   from '@/composables/useFilaments'
+import { useInventory }  from '@/composables/useInventory'
+import type { PartDefinition } from '@/composables/useInventory'
 import { useCompany }    from '@/composables/useCompany'
 import type { NavView } from '@/types'
 
@@ -61,6 +65,28 @@ const { invItems, listTotal, addItem, removeItem, clearAll } = useOrderList()
 const { generateInvoice } = useInvoice()
 const { prices, costPrices, selectedType } = useFilaments()
 const { address: cAddr, email: cEmail, phone: cPhone } = useCompany()
+const { deductPartStock, deductFilament } = useInventory()
+
+// Invoicing mode: 'custom' = manual form, 'stock' = pick from inventory parts
+const invoicingMode = ref<'custom' | 'stock'>('custom')
+const stockPartId   = ref<string | null>(null)
+
+function onFillPart(part: PartDefinition) {
+  // Auto-fill calculator state from part spec
+  selectedType.value = part.filamentType
+  printGrams.value   = part.gramsPerUnit
+  printHours.value   = part.printHoursPerUnit
+  printMins.value    = part.printMinsPerUnit
+  labourMins.value   = part.labourMinsPerUnit
+  jobDesc.value      = part.name
+  stockPartId.value  = part.id
+  calculate()
+}
+
+function onClearPart() {
+  stockPartId.value = null
+  resetJobFields()
+}
 
 // Cross-device settings sync — loads from server on mount, saves on change
 let _settingsReady = false
@@ -132,6 +158,13 @@ function addToOrder(qty: number = 1) {
     printGrams:   base.printGrams   * qty,
   }
   addItem(item)
+  // Deduct from inventory stock
+  if (stockPartId.value) {
+    deductPartStock(stockPartId.value, qty)
+  }
+  // Deduct filament used
+  deductFilament(selectedType.value, base.printGrams * qty)
+  stockPartId.value = null
   resetJobFields()
 }
 
@@ -187,12 +220,32 @@ function onPrintInvoice(showPaymentDetails: boolean) {
   <main class="app-main">
     <Transition name="fade" mode="out-in">
 
-      <!-- ── Calculator view ── -->
-      <div v-if="activeView === 'calculator'" class="calc-layout">
+      <!-- ── Inventory view ── -->
+      <div v-if="activeView === 'inventory'" class="setup-layout">
+        <div class="panel">
+          <InventoryView />
+        </div>
+      </div>
+
+      <!-- ── Invoicing view ── -->
+      <div v-else-if="activeView === 'calculator'" class="calc-layout">
         <!-- Left: form panel -->
         <div class="panel">
-          <p class="panel-heading">New Job</p>
-          <CalculatorForm
+          <!-- Mode toggle -->
+          <div class="mode-toggle">
+            <button class="mode-btn" :class="{ active: invoicingMode === 'stock' }" @click="invoicingMode = 'stock'; onClearPart()">📦 From Stock</button>
+            <button class="mode-btn" :class="{ active: invoicingMode === 'custom' }" @click="invoicingMode = 'custom'; onClearPart()">✏️ Custom Job</button>
+          </div>
+
+          <!-- Stock mode: part selector -->
+          <div v-if="invoicingMode === 'stock'">
+            <StockJobForm @fill-part="onFillPart" @clear="onClearPart" />
+          </div>
+
+          <!-- Custom mode: manual form -->
+          <div v-else>
+            <p class="panel-heading">New Job</p>
+            <CalculatorForm
             v-model:printGrams="printGrams"
             v-model:printHours="printHours"
             v-model:printMins="printMins"
@@ -203,6 +256,7 @@ function onPrintInvoice(showPaymentDetails: boolean) {
             :show-error="showError"
             @calculate="calculate"
           />
+          </div>
         </div>
 
         <!-- Right: results panel -->
@@ -285,3 +339,30 @@ function onPrintInvoice(showPaymentDetails: boolean) {
     </Transition>
   </main>
 </template>
+
+<style scoped>
+.mode-toggle {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.mode-btn {
+  flex: 1;
+  padding: 8px 12px;
+  background: #0a1628;
+  border: 1px solid #1a3a5c;
+  border-radius: 8px;
+  color: #5a7a9a;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.mode-btn.active {
+  background: #1a3a5c;
+  border-color: #4a90d9;
+  color: #e0e8f0;
+  font-weight: 600;
+}
+</style>

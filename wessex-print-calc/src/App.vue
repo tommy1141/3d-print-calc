@@ -19,6 +19,7 @@ import { useInventory }  from '@/composables/useInventory'
 import type { PartDefinition } from '@/composables/useInventory'
 import { useCompany }    from '@/composables/useCompany'
 import type { NavView } from '@/types'
+import type { InvItem } from '@/types'
 
 const activeView = ref<NavView>('calculator')
 
@@ -63,6 +64,9 @@ function rememberCustomer(name: string) {
 
 const { invItems, listTotal, addItem, removeItem, clearAll } = useOrderList()
 const { generateInvoice } = useInvoice()
+
+// Snapshot of items used to generate the current invoice preview
+const invoicedItems = ref<InvItem[]>([])
 const { prices, costPrices, selectedType } = useFilaments()
 const { address: cAddr, email: cEmail, phone: cPhone } = useCompany()
 const { deductPartStock, deductFilament } = useInventory()
@@ -206,11 +210,14 @@ async function onInvoice() {
     invoiceNo.value   = 'INV-LOCAL'
     invoiceDate.value = new Date().toLocaleDateString('en-GB')
   }
+  // Snapshot items for the preview, then clear without confirm dialog
+  invoicedItems.value = [...invItems.value]
+  invItems.value = []
   activeView.value = 'invoice'
 }
 
 function onPrintInvoice(showPaymentDetails: boolean) {
-  generateInvoice(invItems.value, businessName.value, customerName.value, invoiceNo.value, invoiceDate.value, showPaymentDetails)
+  generateInvoice(invoicedItems.value, businessName.value, customerName.value, invoiceNo.value, invoiceDate.value, showPaymentDetails)
 }
 </script>
 
@@ -312,7 +319,7 @@ function onPrintInvoice(showPaymentDetails: boolean) {
       <!-- ── Invoice stage ── -->
       <div v-else-if="activeView === 'invoice'" class="invoice-layout">
         <InvoicePreview
-          :items="invItems"
+          :items="invoicedItems"
           :business="businessName"
           :customer="customerName"
           :invoice-no="invoiceNo"

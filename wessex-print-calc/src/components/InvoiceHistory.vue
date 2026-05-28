@@ -1,27 +1,15 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { onMounted } from 'vue'
 import { useInvoice } from '@/composables/useInvoice'
+import { useInvoiceStore } from '@/composables/useInvoiceStore'
 import type { SavedInvoice } from '@/types'
 
 const emit = defineEmits<{ reprint: [inv: SavedInvoice] }>()
 
-const invoices = ref<SavedInvoice[]>([])
-const loading  = ref(true)
-const apiError = ref(false)
-
+const { invoices, loading, apiError, fetchInvoices, togglePaid, deleteInvoice: storeDelete } = useInvoiceStore()
 const { generateInvoice } = useInvoice()
 
-onMounted(async () => {
-  try {
-    const res = await fetch('/api/invoices')
-    if (!res.ok) throw new Error()
-    invoices.value = await res.json()
-  } catch {
-    apiError.value = true
-  } finally {
-    loading.value = false
-  }
-})
+onMounted(() => fetchInvoices())
 
 function reprint(inv: SavedInvoice) {
   generateInvoice(inv.items, inv.business, inv.customer, inv.invoiceNo, inv.date)
@@ -29,8 +17,7 @@ function reprint(inv: SavedInvoice) {
 
 async function deleteInvoice(inv: SavedInvoice) {
   if (!confirm(`Delete ${inv.invoiceNo}? This cannot be undone.`)) return
-  await fetch(`/api/invoices/${encodeURIComponent(inv.invoiceNo)}`, { method: 'DELETE' })
-  invoices.value = invoices.value.filter(i => i.invoiceNo !== inv.invoiceNo)
+  await storeDelete(inv.invoiceNo)
 }
 </script>
 
@@ -56,6 +43,7 @@ async function deleteInvoice(inv: SavedInvoice) {
             <th>Date</th>
             <th>Customer</th>
             <th class="amount">Total</th>
+            <th>Status</th>
             <th></th>
           </tr>
         </thead>
@@ -65,6 +53,11 @@ async function deleteInvoice(inv: SavedInvoice) {
             <td>{{ inv.date }}</td>
             <td>{{ inv.customer }}</td>
             <td class="amount">£{{ Number(inv.grandTotal).toFixed(2) }}</td>
+            <td>
+              <button class="btn-paid" :class="inv.paid ? 'is-paid' : 'is-unpaid'" @click="togglePaid(inv)">
+                {{ inv.paid ? '✅ Paid' : '⏳ Unpaid' }}
+              </button>
+            </td>
             <td class="actions-cell">
               <button class="btn-reprint" @click="reprint(inv)">🖨️ Reprint</button>
               <button class="btn-delete" @click="deleteInvoice(inv)" title="Delete">🗑️</button>
@@ -181,5 +174,25 @@ tbody td {
   background: #e94560;
   color: #fff;
   border-color: #e94560;
+}
+
+.btn-paid {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  white-space: nowrap;
+  transition: opacity 0.15s;
+}
+.btn-paid:hover { opacity: 0.8; }
+.btn-paid.is-paid {
+  background: #1a4a2a;
+  color: #4caf50;
+}
+.btn-paid.is-unpaid {
+  background: #3a2a1a;
+  color: #e9a020;
 }
 </style>

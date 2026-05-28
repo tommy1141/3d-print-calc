@@ -15,6 +15,7 @@ export interface SavedInvoice {
   }[]
   grandTotal: number
   savedAt: string
+  paid?: boolean
 }
 
 export interface InvItem {

@@ -44,6 +44,15 @@ app.delete('/api/invoices/:invoiceNo', (req, res) => {
   res.json({ ok: true })
 })
 
+app.patch('/api/invoices/:invoiceNo', (req, res) => {
+  const invoices = readInvoices()
+  const inv = invoices.find(i => i.invoiceNo === req.params.invoiceNo)
+  if (!inv) return res.status(404).json({ error: 'Not found' })
+  inv.paid = req.body.paid
+  writeInvoices(invoices)
+  res.json({ ok: true, paid: inv.paid })
+})
+
 app.post('/api/invoices', (req, res) => {
   const invoiceNo = nextInvoiceNo()
   const date      = new Date().toLocaleDateString('en-GB')

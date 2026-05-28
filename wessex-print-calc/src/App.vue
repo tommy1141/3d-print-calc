@@ -3,6 +3,7 @@ import { ref, watch, onMounted, nextTick } from 'vue'
 import { useCalculator } from '@/composables/useCalculator'
 import { useOrderList }  from '@/composables/useOrderList'
 import { useInvoice }    from '@/composables/useInvoice'
+import { useInvoiceStore } from '@/composables/useInvoiceStore'
 import NavBar            from '@/components/NavBar.vue'
 import CalculatorForm    from '@/components/CalculatorForm.vue'
 import CompanySetup      from '@/components/CompanySetup.vue'
@@ -64,6 +65,7 @@ function rememberCustomer(name: string) {
 
 const { invItems, listTotal, addItem, removeItem, clearAll } = useOrderList()
 const { generateInvoice } = useInvoice()
+const { addInvoice: addInvoiceToStore } = useInvoiceStore()
 
 // Snapshot of items used to generate the current invoice preview
 const invoicedItems = ref<InvItem[]>([])
@@ -213,6 +215,24 @@ async function onInvoice() {
   // Snapshot items for the preview, then clear without confirm dialog
   invoicedItems.value = [...invItems.value]
   invItems.value = []
+  // Add to the shared invoice store so the Invoices tab updates immediately
+  addInvoiceToStore({
+    invoiceNo: invoiceNo.value,
+    date:      invoiceDate.value,
+    business:  businessName.value || 'My 3D Print Shop',
+    customer:  normalizeCustomerName(customerName.value) || 'Customer',
+    items:     invoicedItems.value.map(i => ({
+      job:          i.job,
+      sellingPrice: i.sellingPrice,
+      filamentCost: i.filamentCost,
+      powerCost:    i.powerCost,
+      labourCost:   i.labourCost,
+      profit:       i.profit,
+    })),
+    grandTotal: invoicedItems.value.reduce((s, i) => s + i.sellingPrice, 0),
+    savedAt:   new Date().toISOString(),
+    paid:      false,
+  })
   activeView.value = 'invoice'
 }
 

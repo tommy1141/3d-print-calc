@@ -1,27 +1,15 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import type { SavedInvoice } from '@/types'
+import { computed, onMounted } from 'vue'
+import { useInvoiceStore } from '@/composables/useInvoiceStore'
 import { useInventory } from '@/composables/useInventory'
 
-const invoices = ref<SavedInvoice[]>([])
-const loading  = ref(true)
-const apiError = ref(false)
-
+const { invoices, loading, apiError, fetchInvoices } = useInvoiceStore()
 const { spools } = useInventory()
 
-onMounted(async () => {
-  try {
-    const res = await fetch('/api/invoices')
-    if (!res.ok) throw new Error()
-    invoices.value = await res.json()
-  } catch {
-    apiError.value = true
-  } finally {
-    loading.value = false
-  }
-})
+onMounted(() => fetchInvoices(true))
 
-const invoiceCount  = computed(() => invoices.value.length)
+const invoiceCount    = computed(() => invoices.value.length)
+const invoicesPaid    = computed(() => invoices.value.filter(i => i.paid === true).length)
 const totalRevenue  = computed(() => invoices.value.reduce((s, inv) => s + inv.grandTotal, 0))
 const totalMarkupProfit = computed(() => invoices.value.reduce((s, inv) => s + inv.items.reduce((a, i) => a + (i.profit ?? 0), 0), 0))
 const totalFilament = computed(() => invoices.value.reduce((s, inv) => s + inv.items.reduce((a, i) => a + (i.filamentCost ?? 0), 0), 0))
@@ -71,6 +59,12 @@ const fmt = (n: number) => n < 0 ? `-£${Math.abs(n).toFixed(2)}` : `£${n.toFix
           <span class="stat-icon">📋</span>
           <span class="stat-label">Invoices Raised</span>
           <span class="stat-value">{{ invoiceCount }}</span>
+        </div>
+        <div class="stat-card paid" :class="{ 'all-paid': invoicesPaid === invoiceCount && invoiceCount > 0 }">
+          <span class="stat-icon">✅</span>
+          <span class="stat-label">Invoices Paid</span>
+          <span class="stat-value">{{ invoicesPaid }}</span>
+          <span class="stat-sub">{{ invoiceCount - invoicesPaid }} unpaid</span>
         </div>
       </div>
 
@@ -136,7 +130,9 @@ const fmt = (n: number) => n < 0 ? `-£${Math.abs(n).toFixed(2)}` : `£${n.toFix
 .stat-card.profit.negative { border-color: #e94560; }
 .stat-card.profit.negative .stat-value { color: #e94560; }
 .stat-card.cost    { border-color: #ff9800; }
-.stat-card.invoices{ border-color: #9c27b0; }
+.stat-card.invoices { border-color: #9c27b0; }
+.stat-card.paid     { border-color: #607d8b; }
+.stat-card.paid.all-paid { border-color: #4caf50; }
 
 .breakdown-list {
   display: flex;

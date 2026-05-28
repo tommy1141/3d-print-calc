@@ -1,12 +1,16 @@
 <script setup lang="ts">
+import { ref, watch } from 'vue'
 import type { CalcResult } from '@/types'
 
-defineProps<{
+const props = defineProps<{
   result: CalcResult
   margin: number
 }>()
 
-const emit = defineEmits<{ addToOrder: [] }>()
+const emit = defineEmits<{ addToOrder: [qty: number] }>()
+
+const qty = ref(1)
+watch(() => props.result, () => { qty.value = 1 })
 
 const fmt = (n: number) => '£' + n.toFixed(2)
 </script>
@@ -46,7 +50,26 @@ const fmt = (n: number) => '£' + n.toFixed(2)
       <span class="row-value">{{ fmt(result.actualProfit + result.labourCost) }}</span>
     </div>
     <p class="breakdown">{{ result.breakdown }}</p>
-    <button class="btn-add" @click="emit('addToOrder')">&#x2795; Add to Order</button>
+    <div class="qty-row">
+      <span class="qty-label">Quantity</span>
+      <div class="qty-controls">
+        <button class="qty-btn" @click="qty = Math.max(1, qty - 1)">−</button>
+        <input
+          id="qty"
+          type="number"
+          class="qty-input"
+          :min="1"
+          :step="1"
+          v-model.number="qty"
+          @input="qty = Math.max(1, Math.round(qty || 1))"
+        />
+        <button class="qty-btn" @click="qty++">+</button>
+      </div>
+    </div>
+    <button class="btn-add" @click="emit('addToOrder', qty)">
+      &#x2795; Add{{ qty > 1 ? ` ${qty}×` : '' }} to Order
+      <span v-if="qty > 1" class="btn-total">&nbsp;({{ fmt(result.sellingPrice * qty) }})</span>
+    </button>
   </div>
 </template>
 
@@ -116,4 +139,63 @@ const fmt = (n: number) => '£' + n.toFixed(2)
   margin-top: 10px;
 }
 .btn-add:hover { background: #4a90d9; color: #fff; }
+
+.qty-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 14px;
+}
+
+.qty-label {
+  color: #a0a0b0;
+  font-size: 0.85rem;
+}
+
+.qty-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.qty-btn {
+  width: 32px;
+  height: 32px;
+  background: #1a3a5c;
+  border: 1px solid #2a5080;
+  border-radius: 6px;
+  color: #e0e8f0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+  padding: 0;
+  line-height: 1;
+}
+.qty-btn:hover { background: #2a5a8c; }
+
+.qty-input {
+  width: 52px;
+  text-align: center;
+  background: #0f2040;
+  border: 1px solid #1a3a5c;
+  border-radius: 6px;
+  color: #e0e8f0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  padding: 5px 4px;
+  outline: none;
+}
+.qty-input:focus { border-color: #4a90d9; }
+.qty-input::-webkit-inner-spin-button,
+.qty-input::-webkit-outer-spin-button { opacity: 0.5; }
+
+.btn-total {
+  font-size: 0.85rem;
+  font-weight: 500;
+  opacity: 0.85;
+}
 </style>

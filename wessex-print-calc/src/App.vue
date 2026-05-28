@@ -117,9 +117,21 @@ onMounted(async () => {
 const invoiceNo   = ref('')
 const invoiceDate = ref('')
 
-function addToOrder() {
+function addToOrder(qty: number = 1) {
   if (!pendingItem.value) return
-  addItem(pendingItem.value)
+  const base = pendingItem.value
+  const item = qty <= 1 ? { ...base } : {
+    ...base,
+    job:          `${base.job} \u00d7${qty}`,
+    filamentCost: base.filamentCost * qty,
+    powerCost:    base.powerCost    * qty,
+    labourCost:   base.labourCost   * qty,
+    total:        base.total        * qty,
+    sellingPrice: base.sellingPrice * qty,
+    profit:       base.profit       * qty,
+    printGrams:   base.printGrams   * qty,
+  }
+  addItem(item)
   resetJobFields()
 }
 

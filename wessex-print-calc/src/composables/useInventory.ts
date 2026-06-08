@@ -20,6 +20,8 @@ export interface PartDefinition {
   labourMinsPerUnit: number
   batchSize: number
   batchFilamentGrams?: number  // total grams for one full batch run (overrides gramsPerUnit × batchSize for deduction)
+  batchPrintHours?: number    // print time for a full batch (stored only, not yet used)
+  batchPrintMins?: number
   inStock: number
 }
 
@@ -132,9 +134,22 @@ export function useInventory() {
     if (part) part.inStock = Math.max(0, part.inStock - qty)
   }
 
+  /** Restore qty back to a part's stock (called when order item removed/reduced). */
+  function restorePartStock(partId: string, qty: number) {
+    const part = parts.value.find(p => p.id === partId)
+    if (part) part.inStock += qty
+  }
+
+  /** Add grams back to the first spool of a given type. */
+  function restoreFilament(type: FilamentType, grams: number) {
+    const spool = spools.value.find(s => s.type === type)
+    if (spool) spool.grams += grams
+  }
+
   return {
     spools, parts, updatePart,
-    addSpool, updateSpoolGrams, updateSpool, setSpoolRolls, deleteSpool, deductFilament, availableGrams,
-    addPart, updatePartStock, deletePart, printBatch, deductPartStock,
+    addSpool, updateSpoolGrams, updateSpool, setSpoolRolls, deleteSpool,
+    deductFilament, restoreFilament, availableGrams,
+    addPart, updatePartStock, deletePart, printBatch, deductPartStock, restorePartStock,
   }
 }

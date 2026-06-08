@@ -20,6 +20,9 @@ export interface SavedInvoice {
 
 export interface InvItem {
   job: string
+  qty: number
+  partId?: string
+  filamentType: string
   filamentCost: number
   powerCost: number
   labourCost: number

@@ -71,7 +71,7 @@ const { addInvoice: addInvoiceToStore } = useInvoiceStore()
 const invoicedItems = ref<InvItem[]>([])
 const { prices, costPrices, selectedType } = useFilaments()
 const { address: cAddr, email: cEmail, phone: cPhone } = useCompany()
-const { deductPartStock, deductFilament } = useInventory()
+const { deductPartStock, deductFilament, restorePartStock, restoreFilament } = useInventory()
 
 // Invoicing mode: 'custom' = manual form, 'stock' = pick from inventory parts
 const invoicingMode = ref<'custom' | 'stock'>('custom')
@@ -152,9 +152,11 @@ const invoiceDate = ref('')
 function addToOrder(qty: number = 1) {
   if (!pendingItem.value) return
   const base = pendingItem.value
-  const item = qty <= 1 ? { ...base } : {
+  const item = {
     ...base,
-    job:          `${base.job} \u00d7${qty}`,
+    qty,
+    partId:       stockPartId.value ?? undefined,
+    filamentType: selectedType.value,
     filamentCost: base.filamentCost * qty,
     powerCost:    base.powerCost    * qty,
     labourCost:   base.labourCost   * qty,
@@ -164,14 +166,54 @@ function addToOrder(qty: number = 1) {
     printGrams:   base.printGrams   * qty,
   }
   addItem(item)
-  // Deduct from inventory stock
-  if (stockPartId.value) {
-    deductPartStock(stockPartId.value, qty)
-  }
-  // Deduct filament used
+  if (stockPartId.value) deductPartStock(stockPartId.value, qty)
   deductFilament(selectedType.value, base.printGrams * qty)
   stockPartId.value = null
   resetJobFields()
+}
+
+function onRemoveItem(index: number) {
+  const item = invItems.value[index]
+  if (item.partId) restorePartStock(item.partId, item.qty)
+  restoreFilament(item.filamentType as any, item.printGrams)
+  invItems.value.splice(index, 1)
+}
+
+function onUpdateQty(index: number, newQty: number) {
+  if (newQty < 1) return
+  const item = invItems.value[index]
+  const oldQty = item.qty
+  if (newQty === oldQty) return
+  const gramsPerUnit = item.printGrams / oldQty
+  const delta = oldQty - newQty
+  if (delta > 0) {
+    if (item.partId) restorePartStock(item.partId, delta)
+    restoreFilament(item.filamentType as any, gramsPerUnit * delta)
+  } else {
+    const add = -delta
+    if (item.partId) deductPartStock(item.partId, add)
+    deductFilament(item.filamentType as any, gramsPerUnit * add)
+  }
+  const scale = newQty / oldQty
+  invItems.value.splice(index, 1, {
+    ...item,
+    qty:          newQty,
+    filamentCost: Math.round(item.filamentCost * scale * 100) / 100,
+    powerCost:    Math.round(item.powerCost    * scale * 100) / 100,
+    labourCost:   Math.round(item.labourCost   * scale * 100) / 100,
+    total:        Math.round(item.total        * scale * 100) / 100,
+    sellingPrice: Math.round(item.sellingPrice * scale * 100) / 100,
+    profit:       Math.round(item.profit       * scale * 100) / 100,
+    printGrams:   gramsPerUnit * newQty,
+  })
+}
+
+function onCancelOrder() {
+  for (const item of invItems.value) {
+    if (item.partId) restorePartStock(item.partId, item.qty)
+    restoreFilament(item.filamentType as any, item.printGrams)
+  }
+  invItems.value = []
 }
 
 async function onInvoice() {
@@ -194,7 +236,7 @@ async function onInvoice() {
         business:   businessName.value || 'My 3D Print Shop',
         customer:   invoiceCustomer,
         items:      invItems.value.map(i => ({
-        job:          i.job,
+        job:          i.qty > 1 ? `${i.job} ×${i.qty}` : i.job,
         sellingPrice: i.sellingPrice,
         filamentCost: i.filamentCost,
         powerCost:    i.powerCost,
@@ -222,7 +264,7 @@ async function onInvoice() {
     business:  businessName.value || 'My 3D Print Shop',
     customer:  normalizeCustomerName(customerName.value) || 'Customer',
     items:     invoicedItems.value.map(i => ({
-      job:          i.job,
+      job:          i.qty > 1 ? `${i.job} \u00d7${i.qty}` : i.job,
       sellingPrice: i.sellingPrice,
       filamentCost: i.filamentCost,
       powerCost:    i.powerCost,
@@ -306,8 +348,9 @@ function onPrintInvoice(showPaymentDetails: boolean) {
             <OrderList
               :items="invItems"
               :total="listTotal"
-              @remove="removeItem"
-              @clear="clearAll"
+              @remove="onRemoveItem"
+              @update-qty="onUpdateQty"
+              @clear="onCancelOrder"
               @invoice="onInvoice"
             />
           </div>

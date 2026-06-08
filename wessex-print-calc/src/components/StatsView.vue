@@ -147,31 +147,34 @@ const fmt = (n: number) => n < 0 ? `-£${Math.abs(n).toFixed(2)}` : `£${n.toFix
   align-items: center;
   padding: 0.6rem 0.75rem;
   border-radius: 6px;
-  background: var(--color-background-soft, #f8f8f8);
+  background: #0d2137;
+  border: 1px solid #1a3a5c;
   font-size: 0.95rem;
+  color: #c8d8e8;
 }
 
 .breakdown-row span:last-child {
   font-weight: 600;
   font-variant-numeric: tabular-nums;
+  color: #e0e8f0;
 }
 
 .take-home-row {
-  background: color-mix(in srgb, #2196f3 12%, var(--color-background-soft, #f8f8f8));
-  border: 1px solid color-mix(in srgb, #2196f3 30%, transparent);
+  background: #0d2137;
+  border: 1px solid #1a4a7a;
 }
 
 .take-home-row span:last-child {
-  color: #2196f3;
+  color: #4fc3f7;
 }
 
 .stock-row {
-  background: color-mix(in srgb, #ff9800 10%, var(--color-background-soft, #f8f8f8));
-  border: 1px solid color-mix(in srgb, #ff9800 30%, transparent);
+  background: #0d2137;
+  border: 1px solid #5a3a1a;
 }
 
 .stock-row span:last-child {
-  color: #e65100;
+  color: #ffb74d;
 }
 
 .status-msg {

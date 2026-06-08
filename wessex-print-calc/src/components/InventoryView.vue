@@ -20,7 +20,8 @@ function openAdd(mode: AddMode) {
 function resetForms() {
   fType.value = 'pla_plus'; fBrand.value = brands.value[0] ?? ''; fColour.value = ''; fRolls.value = null; fCost.value = null
   pName.value = ''; pType.value = 'pla_plus'; pGrams.value = null
-  pHours.value = null; pMins.value = null; pLabour.value = null; pBatch.value = null; pBatchGrams.value = null
+  pHours.value = null; pMins.value = null; pLabour.value = null
+  pBatchable.value = false; pBatch.value = 2; pBatchGrams.value = null; pBatchHours.value = null; pBatchMins.value = null
 }
 
 // ── Filament form ──────────────────────────────────────────────────
@@ -63,8 +64,11 @@ const pGrams      = ref<number | null>(null)
 const pHours      = ref<number | null>(0)
 const pMins       = ref<number | null>(0)
 const pLabour     = ref<number | null>(15)
-const pBatch      = ref<number | null>(1)
-const pBatchGrams = ref<number | null>(null)
+const pBatchable   = ref(false)
+const pBatch       = ref<number | null>(2)
+const pBatchGrams  = ref<number | null>(null)
+const pBatchHours  = ref<number | null>(null)
+const pBatchMins   = ref<number | null>(null)
 
 function submitPart() {
   const name = pName.value.trim()
@@ -72,8 +76,11 @@ function submitPart() {
   addPart({
     name, filamentType: pType.value, gramsPerUnit: pGrams.value,
     printHoursPerUnit: pHours.value ?? 0, printMinsPerUnit: pMins.value ?? 0,
-    labourMinsPerUnit: pLabour.value ?? 0, batchSize: pBatch.value ?? 1,
-    batchFilamentGrams: pBatchGrams.value ?? undefined,
+    labourMinsPerUnit: pLabour.value ?? 0,
+    batchSize: pBatchable.value ? (pBatch.value ?? 2) : 1,
+    batchFilamentGrams: pBatchable.value ? (pBatchGrams.value ?? undefined) : undefined,
+    batchPrintHours: pBatchable.value ? (pBatchHours.value ?? undefined) : undefined,
+    batchPrintMins:  pBatchable.value ? (pBatchMins.value ?? undefined) : undefined,
   })
   addMode.value = 'none'; resetForms()
 }
@@ -284,8 +291,9 @@ const suggestedCost = computed(() => {
       <div v-if="addMode === 'part'" class="add-panel">
         <p class="add-panel-title">Define New Part</p>
         <p class="add-panel-sub">All specs are per single unit. Batch size = how many you print in one run.</p>
-        <div class="add-grid">
-          <div class="field-g field-wide">
+        <div class="part-add-grid">
+          <!-- Row 1: per-unit specs -->
+          <div class="field-g">
             <label>Part name</label>
             <input class="inv-input" type="text" placeholder="e.g. Cable clip v2" v-model="pName" @keydown.enter="submitPart" />
           </div>
@@ -295,7 +303,7 @@ const suggestedCost = computed(() => {
               <option v-for="k in FILAMENT_KEYS" :key="k" :value="k">{{ typeLabel(k) }}</option>
             </select>
           </div>
-          <div class="field-g field-sm">
+          <div class="field-g">
             <label>Filament per unit</label>
             <div class="input-unit-row">
               <input class="inv-input num-sm" type="number" :min="0" step="1" placeholder="e.g. 45"
@@ -303,7 +311,7 @@ const suggestedCost = computed(() => {
               <span class="unit-lbl">g</span>
             </div>
           </div>
-          <div class="field-g field-sm">
+          <div class="field-g">
             <label>Print time per unit</label>
             <div class="duration-row">
               <input class="inv-input num-sm" type="number" :min="0" step="1" placeholder="0"
@@ -314,7 +322,8 @@ const suggestedCost = computed(() => {
               <span class="unit-lbl">m</span>
             </div>
           </div>
-          <div class="field-g field-sm">
+          <!-- Row 2: labour + batch toggle + batch fields -->
+          <div class="field-g">
             <label>Labour per unit</label>
             <div class="input-unit-row">
               <input class="inv-input num-sm" type="number" :min="0" step="1" placeholder="e.g. 5"
@@ -322,23 +331,44 @@ const suggestedCost = computed(() => {
               <span class="unit-lbl">min</span>
             </div>
           </div>
-          <div class="field-g field-sm">
+          <div class="field-g batch-toggle-cell">
+            <label class="batch-check-label">
+              <input type="checkbox" v-model="pBatchable" />
+              Printable in batch?
+            </label>
+          </div>
+          <div class="field-g" :style="{ visibility: pBatchable ? 'visible' : 'hidden' }">
             <label>Batch size</label>
             <div class="input-unit-row">
-              <input class="inv-input num-sm" type="number" :min="1" step="1" placeholder="e.g. 8"
+              <input class="inv-input num-sm" type="number" :min="2" step="1" placeholder="e.g. 8"
                 :value="pBatch ?? ''" @input="pBatch = numInput($event)" @keydown.enter="submitPart" />
               <span class="unit-lbl">units</span>
             </div>
           </div>
-          <div class="field-g field-sm">
-            <label>Filament per batch <span class="opt">(optional)</span></label>
-            <div class="input-unit-row">
-              <input class="inv-input num-sm" type="number" :min="0" step="1" placeholder="auto"
-                :value="pBatchGrams ?? ''" @input="pBatchGrams = numInput($event)" @keydown.enter="submitPart" />
-              <span class="unit-lbl">g total</span>
+          <div class="field-g" :style="{ visibility: pBatchable ? 'visible' : 'hidden' }">
+            <label>Batch print time</label>
+            <div class="duration-row">
+              <input class="inv-input num-sm" type="number" :min="0" step="1" placeholder="0"
+                :value="pBatchHours ?? ''" @input="pBatchHours = numInput($event)" @keydown.enter="submitPart" />
+              <span class="unit-lbl">h</span>
+              <input class="inv-input num-sm" type="number" :min="0" :max="59" step="1" placeholder="0"
+                :value="pBatchMins ?? ''" @input="pBatchMins = numInput($event)" @keydown.enter="submitPart" />
+              <span class="unit-lbl">m</span>
             </div>
-            <span class="field-hint">If blank: {{ pGrams && pBatch ? (pGrams * (pBatch ?? 1)) + 'g' : 'g/unit × batch' }}</span>
           </div>
+          <!-- Row 3: filament per batch (col 4 only, visible when batch enabled) -->
+          <template v-if="pBatchable">
+            <div></div><div></div><div></div>
+            <div class="field-g">
+              <label>Filament per batch <span class="opt">(optional)</span></label>
+              <div class="input-unit-row">
+                <input class="inv-input num-sm" type="number" :min="0" step="1" placeholder="auto"
+                  :value="pBatchGrams ?? ''" @input="pBatchGrams = numInput($event)" @keydown.enter="submitPart" />
+                <span class="unit-lbl">g total</span>
+              </div>
+              <span class="field-hint">If blank: {{ pGrams && pBatch ? (pGrams * (pBatch ?? 1)) + 'g' : 'g/unit × batch' }}</span>
+            </div>
+          </template>
         </div>
         <div class="add-panel-actions">
           <button class="btn-submit" @click="submitPart" :disabled="!pName.trim() || !pGrams">Save Part</button>
@@ -558,6 +588,48 @@ const suggestedCost = computed(() => {
 .field-wide { min-width: 210px; flex: 2; }
 .field-g label { font-size: 0.78rem; color: #5a7a9a; font-weight: 500; }
 .opt { font-weight: 400; opacity: 0.7; }
+
+.batch-subgrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 0;
+}
+
+.part-add-grid {
+  display: grid;
+  grid-template-columns: 2fr 1.2fr 1fr 1.3fr;
+  gap: 12px;
+  margin-bottom: 14px;
+  align-items: start;
+}
+
+.batch-toggle-cell {
+  display: flex;
+  align-items: center;
+  padding-top: 20px;
+}
+
+.batch-toggle-row {
+  display: flex;
+  align-items: center;
+  padding: 6px 0;
+}
+.batch-check-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.88rem;
+  color: #a0b8d0;
+  cursor: pointer;
+  user-select: none;
+}
+.batch-check-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #4a90d9;
+  cursor: pointer;
+}
 .inv-input { background: #0f2040; border: 1px solid #1a3a5c; border-radius: 7px; color: #e0e8f0; font-size: 0.9rem; padding: 8px 10px; outline: none; transition: border-color 0.2s; width: 100%; box-sizing: border-box; }
 .inv-input:focus { border-color: #4a90d9; }
 .inv-input::placeholder { color: #2a4a6a; }

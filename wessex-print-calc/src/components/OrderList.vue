@@ -7,9 +7,10 @@ defineProps<{
 }>()
 
 const emit = defineEmits<{
-  remove:  [index: number]
-  clear:   []
-  invoice: []
+  remove:     [index: number]
+  'update-qty': [index: number, qty: number]
+  clear:      []
+  invoice:    []
 }>()
 </script>
 
@@ -19,6 +20,11 @@ const emit = defineEmits<{
     <div>
       <div class="order-row" v-for="(item, i) in items" :key="i">
         <span class="order-name" :title="item.job">{{ item.job }}</span>
+        <div class="qty-ctrl">
+          <button class="qty-btn" @click="emit('update-qty', i, item.qty - 1)" :disabled="item.qty <= 1">&minus;</button>
+          <span class="qty-val">{{ item.qty }}</span>
+          <button class="qty-btn" @click="emit('update-qty', i, item.qty + 1)">+</button>
+        </div>
         <span class="order-price">£{{ item.sellingPrice.toFixed(2) }}</span>
         <button class="btn-remove" @click="emit('remove', i)" title="Remove">&times;</button>
       </div>
@@ -28,7 +34,7 @@ const emit = defineEmits<{
       <span class="order-total-value">{{ total }}</span>
     </div>
     <button class="btn-invoice" @click="emit('invoice')">&#x1F4C4; Generate Invoice PDF</button>
-    <button class="btn-clear" @click="emit('clear')">&#x2715; Clear All Items</button>
+    <button class="btn-clear" @click="emit('clear')">&#x2715; Cancel Order</button>
   </div>
 </template>
 
@@ -86,6 +92,41 @@ const emit = defineEmits<{
   font-weight: normal;
 }
 .btn-remove:hover { background: none; color: #ff6b6b; transform: none; }
+
+.qty-ctrl {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0 8px;
+}
+.qty-btn {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  background: #1a3a5c;
+  border: 1px solid #2a5a8c;
+  border-radius: 4px;
+  color: #c0d8f0;
+  font-size: 0.9rem;
+  cursor: pointer;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+  margin-top: 0;
+  width: auto;
+  min-width: 22px;
+}
+.qty-btn:hover:not(:disabled) { background: #2a5a8c; }
+.qty-btn:disabled { opacity: 0.3; cursor: default; }
+.qty-val {
+  min-width: 20px;
+  text-align: center;
+  font-size: 0.85rem;
+  color: #e0e8f0;
+  font-weight: 600;
+}
 
 .order-total {
   display: flex;

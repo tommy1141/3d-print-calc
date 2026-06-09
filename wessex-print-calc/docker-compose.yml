@@ -6,14 +6,15 @@ services:
       - TZ=Europe/London
     volumes:
       - /docker/3d-print-calc/data:/data
-      - purchase-orders:/data/purchase-orders
+      # Uncomment below + set NAS_* env vars in Portainer to enable NAS purchase order storage
+      # - purchase-orders:/data/purchase-orders
     ports:
       - 5123:80
     restart: unless-stopped
 
-volumes:
-  purchase-orders:
-    driver_opts:
-      type: cifs
-      device: ${NAS_DEVICE}
-      o: "username=${NAS_USER},password=${NAS_PASS},vers=2.0,uid=${NAS_UID},gid=${NAS_GID}"
+# volumes:
+#   purchase-orders:
+#     driver_opts:
+#       type: cifs
+#       device: ${NAS_DEVICE}
+#       o: "username=${NAS_USER},password=${NAS_PASS},vers=2.0,uid=${NAS_UID},gid=${NAS_GID}"

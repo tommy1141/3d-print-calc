@@ -346,10 +346,6 @@ async function onQuote() {
   activeView.value = 'quote-preview'
 }
 
-function onPrintQuote() {
-  generateQuote(quotedItems.value, businessName.value, customerName.value, quoteNo.value, quoteDate.value)
-}
-
 function onPrintInvoice(showPaymentDetails: boolean) {
   generateInvoice(invoicedItems.value, businessName.value, customerName.value, invoiceNo.value, invoiceDate.value, showPaymentDetails)
 }
@@ -484,7 +480,7 @@ function onPrintInvoice(showPaymentDetails: boolean) {
           :quote-no="quoteNo"
           :date="quoteDate"
           @back="activeView = 'invoicing'"
-          @print="onPrintQuote"
+          @view-quotes="activeView = 'quotes'"
         />
       </div>
 

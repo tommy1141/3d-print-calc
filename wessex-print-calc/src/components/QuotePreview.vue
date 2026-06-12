@@ -13,7 +13,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   back: []
-  print: []
+  viewQuotes: []
 }>()
 
 const company = useCompany()
@@ -76,7 +76,7 @@ const grandTotal = computed(() => props.items.reduce((s, i) => s + i.sellingPric
 
     <div class="actions">
       <button class="btn-back" @click="emit('back')">← Back</button>
-      <button class="btn-pdf" @click="emit('print')">🖨️ Save as PDF</button>
+      <button class="btn-pdf" @click="emit('viewQuotes')">📂 View Quotes</button>
     </div>
   </div>
 </template>

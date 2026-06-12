@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import type { InvItem } from '@/types'
 import { useCompany } from '@/composables/useCompany'
+import { useInvoice } from '@/composables/useInvoice'
 
 const props = defineProps<{
   items: InvItem[]
@@ -13,10 +14,10 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   back: []
-  print: [showPaymentDetails: boolean]
 }>()
 
 const company = useCompany()
+const { generateInvoice } = useInvoice()
 
 const grandTotal = computed(() =>
   props.items.reduce((s, i) => s + i.sellingPrice, 0)
@@ -24,6 +25,10 @@ const grandTotal = computed(() =>
 
 const hasBankDetails = computed(() => !!(company.bankName.value || company.accountNumber.value))
 const showPaymentDetails = ref(true)
+
+function printPdf() {
+  generateInvoice(props.items, props.business, props.customer, props.invoiceNo, props.date, showPaymentDetails.value)
+}
 </script>
 
 <template>
@@ -98,7 +103,7 @@ const showPaymentDetails = ref(true)
         <input type="checkbox" v-model="showPaymentDetails" />
         Include payment details
       </label>
-      <button class="btn-pdf" @click="emit('print', showPaymentDetails)">🖨️ Save as PDF</button>
+      <button class="btn-pdf" @click="printPdf()">🖨️ Save as PDF</button>
     </div>
   </div>
 </template>

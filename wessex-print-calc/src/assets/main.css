@@ -28,9 +28,9 @@ body {
   margin: 0 auto;
   padding: 0 28px;
   height: 60px;
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: space-between;
 }
 
 .nav-brand {
@@ -48,16 +48,19 @@ body {
   font-size: 1.4rem;
 }
 
-/* Inline desktop nav links */
+/* Inline desktop nav links — centred column */
 .nav-links {
   display: flex;
   align-items: center;
   gap: 4px;
-  flex: 1;
+  justify-content: center;
 }
 
-.nav-tab--right {
-  margin-left: auto;
+/* Right slot — aligns Company Setup to the far right */
+.nav-right {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
 }
 
 .nav-tab {

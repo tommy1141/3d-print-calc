@@ -2,12 +2,15 @@
 import { onMounted } from 'vue'
 import { useInvoice } from '@/composables/useInvoice'
 import { useInvoiceStore } from '@/composables/useInvoiceStore'
+import { useInventory } from '@/composables/useInventory'
 import type { SavedInvoice } from '@/types'
+import type { FilamentType } from '@/composables/useFilaments'
 
 const emit = defineEmits<{ reprint: [inv: SavedInvoice] }>()
 
 const { invoices, loading, apiError, fetchInvoices, togglePaid, deleteInvoice: storeDelete } = useInvoiceStore()
 const { generateInvoice } = useInvoice()
+const { restorePartStock, restoreFilament } = useInventory()
 
 onMounted(() => fetchInvoices())
 
@@ -17,6 +20,15 @@ function reprint(inv: SavedInvoice) {
 
 async function deleteInvoice(inv: SavedInvoice) {
   if (!confirm(`Delete ${inv.invoiceNo}? This cannot be undone.`)) return
+  // Restore stock for each line item that has the necessary data
+  for (const item of inv.items) {
+    if (item.partId && item.qty) {
+      restorePartStock(item.partId, item.qty)
+    }
+    if (item.filamentType && item.printGrams) {
+      restoreFilament(item.filamentType as FilamentType, item.printGrams)
+    }
+  }
   await storeDelete(inv.invoiceNo)
 }
 </script>

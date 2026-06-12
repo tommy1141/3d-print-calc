@@ -33,31 +33,10 @@ function go(view: NavView) {
         </button>
         <button
           class="nav-tab"
-          :class="{ active: activeView === 'materials' }"
-          @click="go('materials')"
-        >
-          🧵 Materials
-        </button>
-        <button
-          class="nav-tab"
-          :class="{ active: activeView === 'calculator' }"
-          @click="go('calculator')"
+          :class="{ active: ['invoicing','calculator','quotes','invoices','invoice','quote-preview'].includes(activeView) }"
+          @click="go('invoicing')"
         >
           🧾 Invoicing
-        </button>
-        <button
-          class="nav-tab"
-          :class="{ active: activeView === 'quotes' }"
-          @click="go('quotes')"
-        >
-          📝 Quotes
-        </button>
-        <button
-          class="nav-tab"
-          :class="{ active: activeView === 'invoices' }"
-          @click="go('invoices')"
-        >
-          📊 Invoices
         </button>
         <button
           class="nav-tab"
@@ -66,14 +45,18 @@ function go(view: NavView) {
         >
           📈 Stats
         </button>
+      </nav>
+
+      <!-- Right slot: Company Setup -->
+      <div class="nav-right">
         <button
-          class="nav-tab nav-tab--right"
+          class="nav-tab"
           :class="{ active: activeView === 'setup' }"
           @click="go('setup')"
         >
           ⚙️ Company Setup
         </button>
-      </nav>
+      </div>
 
       <!-- Mobile burger -->
       <button
@@ -100,24 +83,10 @@ function go(view: NavView) {
           </button>
           <button
             class="nav-tab"
-            :class="{ active: activeView === 'materials' }"
-            @click="go('materials')"
-          >
-            🧵 Materials
-          </button>
-          <button
-            class="nav-tab"
-            :class="{ active: activeView === 'calculator' }"
-            @click="go('calculator')"
+            :class="{ active: ['invoicing','calculator','quotes','invoices','invoice','quote-preview'].includes(activeView) }"
+            @click="go('invoicing')"
           >
             🧾 Invoicing
-          </button>
-          <button
-            class="nav-tab"
-            :class="{ active: activeView === 'invoices' }"
-            @click="go('invoices')"
-          >
-            📊 Invoices
           </button>
           <button
             class="nav-tab"

@@ -13,6 +13,7 @@ import CostResult        from '@/components/CostResult.vue'
 import OrderList         from '@/components/OrderList.vue'
 import InvoicePreview    from '@/components/InvoicePreview.vue'
 import InvoiceHistory    from '@/components/InvoiceHistory.vue'
+import InvoicingHub      from '@/components/InvoicingHub.vue'
 import QuoteHistory      from '@/components/QuoteHistory.vue'
 import QuotePreview      from '@/components/QuotePreview.vue'
 import StatsView         from '@/components/StatsView.vue'
@@ -275,6 +276,11 @@ async function onInvoice() {
       powerCost:    i.powerCost,
       labourCost:   i.labourCost,
       profit:       i.profit,
+      // Stock restoration fields
+      partId:       i.partId,
+      filamentType: i.filamentType,
+      printGrams:   i.printGrams,
+      qty:          i.qty,
     })),
     grandTotal: invoicedItems.value.reduce((s, i) => s + i.sellingPrice, 0),
     savedAt:   new Date().toISOString(),
@@ -358,14 +364,22 @@ function onPrintInvoice(showPaymentDetails: boolean) {
       <!-- ── Inventory view ── -->
       <div v-if="activeView === 'inventory'" class="setup-layout">
         <div class="panel">
-          <InventoryView />
+          <InventoryView @settings="activeView = 'materials'" />
         </div>
       </div>
 
-      <!-- ── Invoicing view ── -->
+      <!-- ── Invoicing hub ── -->
+      <div v-else-if="activeView === 'invoicing'" class="setup-layout">
+        <InvoicingHub @navigate="(v) => activeView = v" />
+      </div>
+
+      <!-- ── Calculator / order form ── -->
       <div v-else-if="activeView === 'calculator'" class="calc-layout">
         <!-- Left: form panel -->
         <div class="panel">
+          <div class="back-bar">
+            <button class="back-btn" @click="activeView = 'invoicing'">← Back to Invoicing</button>
+          </div>
           <!-- Mode toggle -->
           <div class="mode-toggle">
             <button class="mode-btn" :class="{ active: invoicingMode === 'stock' }" @click="invoicingMode = 'stock'; onClearPart()">📦 From Stock</button>
@@ -454,26 +468,31 @@ function onPrintInvoice(showPaymentDetails: boolean) {
           :customer="customerName"
           :invoice-no="invoiceNo"
           :date="invoiceDate"
-          @back="activeView = 'calculator'"
-          @print="onPrintInvoice"
+          @back="activeView = 'invoicing'"
         />
       </div>
 
       <!-- ── Quote preview ── -->
       <div v-else-if="activeView === 'quote-preview'" class="invoice-layout">
+        <div class="back-bar">
+          <button class="back-btn" @click="activeView = 'invoicing'">← Back to Invoicing</button>
+        </div>
         <QuotePreview
           :items="quotedItems"
           :business="businessName"
           :customer="customerName"
           :quote-no="quoteNo"
           :date="quoteDate"
-          @back="activeView = 'calculator'"
+          @back="activeView = 'invoicing'"
           @print="onPrintQuote"
         />
       </div>
 
       <!-- ── Quote history ── -->
       <div v-else-if="activeView === 'quotes'" class="setup-layout">
+        <div class="back-bar">
+          <button class="back-btn" @click="activeView = 'invoicing'">← Back to Invoicing</button>
+        </div>
         <div class="panel">
           <QuoteHistory />
         </div>
@@ -481,6 +500,9 @@ function onPrintInvoice(showPaymentDetails: boolean) {
 
       <!-- ── Invoice history ── -->
       <div v-else-if="activeView === 'invoices'" class="setup-layout">
+        <div class="back-bar">
+          <button class="back-btn" @click="activeView = 'invoicing'">← Back to Invoicing</button>
+        </div>
         <div class="panel">
           <InvoiceHistory @reprint="(inv) => generateInvoice(inv.items, inv.business, inv.customer, inv.invoiceNo, inv.date)" />
         </div>
@@ -498,6 +520,26 @@ function onPrintInvoice(showPaymentDetails: boolean) {
 </template>
 
 <style scoped>
+.back-bar {
+  margin-bottom: 14px;
+}
+
+.back-btn {
+  padding: 7px 16px;
+  background: transparent;
+  border: 1px solid #1a3a5c;
+  border-radius: 8px;
+  color: #7090b0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.back-btn:hover {
+  background: #1a3a5c;
+  color: #c0c8d8;
+}
+
 .mode-toggle {
   display: flex;
   gap: 8px;

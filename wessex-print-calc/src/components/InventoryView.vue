@@ -8,6 +8,8 @@ import type { PartDefinition, FilamentSpool } from '@/composables/useInventory'
 const { spools, parts, addSpool, updateSpoolGrams, updateSpool, setSpoolRolls, deleteSpool, addPart, updatePart, printBatch, deletePart } = useInventory()
 const { costPrices, brands, brandCostPrices } = useFilaments()
 
+const emit = defineEmits<{ settings: [] }>()
+
 type AddMode = 'none' | 'filament' | 'part'
 const addMode = ref<AddMode>('none')
 
@@ -235,6 +237,7 @@ const suggestedCost = computed(() => {
     <div class="add-bar">
       <button class="add-bar-btn" :class="{ active: addMode === 'filament' }" @click="openAdd('filament')">🧵 Add Filament</button>
       <button class="add-bar-btn" :class="{ active: addMode === 'part' }" @click="openAdd('part')">📦 Define New Part</button>
+      <button class="add-bar-cog" title="Materials setup" @click="emit('settings')">⚙️</button>
     </div>
 
     <!-- Filament add form -->
@@ -574,10 +577,12 @@ const suggestedCost = computed(() => {
 <style scoped>
 .inv-root { display: flex; flex-direction: column; gap: 1.5rem; width: 100%; }
 
-.add-bar { display: flex; gap: 10px; flex-wrap: wrap; }
+.add-bar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
 .add-bar-btn { padding: 9px 18px; background: #0f2040; border: 1px solid #1a3a5c; border-radius: 8px; color: #7090b0; font-size: 0.88rem; font-weight: 600; cursor: pointer; transition: background 0.15s, color 0.15s, border-color 0.15s; }
 .add-bar-btn:hover  { background: #1a3a5c; color: #c0c8d8; }
 .add-bar-btn.active { background: rgba(74,144,217,0.12); border-color: #4a90d9; color: #4a90d9; }
+.add-bar-cog { margin-left: auto; padding: 8px 12px; background: #0f2040; border: 1px solid #1a3a5c; border-radius: 8px; color: #7090b0; font-size: 1rem; cursor: pointer; transition: background 0.15s, color 0.15s; line-height: 1; }
+.add-bar-cog:hover { background: #1a3a5c; color: #c0c8d8; }
 
 .add-panel { background: #0a1628; border: 1px solid #1a3a5c; border-radius: 10px; padding: 18px 20px; }
 .add-panel-title { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; color: #4a90d9; font-weight: 700; margin-bottom: 4px; }

@@ -1,4 +1,4 @@
-export type NavView = 'inventory' | 'calculator' | 'setup' | 'materials' | 'invoice' | 'invoices' | 'stats' | 'quotes' | 'quote-preview'
+export type NavView = 'inventory' | 'calculator' | 'setup' | 'materials' | 'invoice' | 'invoices' | 'invoicing' | 'stats' | 'quotes' | 'quote-preview'
 
 export type QuoteStatus = 'pending' | 'sent' | 'accepted' | 'declined'
 
@@ -33,6 +33,11 @@ export interface SavedInvoice {
     powerCost?: number
     labourCost?: number
     profit?: number
+    // Stock restoration fields
+    partId?: string
+    filamentType?: string
+    printGrams?: number
+    qty?: number
   }[]
   grandTotal: number
   savedAt: string

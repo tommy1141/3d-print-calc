@@ -126,5 +126,73 @@ export function useInvoice() {
     win.document.close()
   }
 
-  return { generateInvoice }
+  function generateQuote(
+    items: { job: string; sellingPrice: number }[],
+    business: string,
+    customer: string,
+    quoteNo: string,
+    date: string,
+  ) {
+    const biz        = escHtml(business || 'My 3D Print Shop')
+    const cust       = escHtml(customer || 'Customer')
+    const grandTotal = items.reduce((sum, item) => sum + item.sellingPrice, 0)
+    const rows       = items
+      .map(item => `<tr><td>${escHtml(item.job)}</td><td class="amount">£${item.sellingPrice.toFixed(2)}</td></tr>`)
+      .join('')
+
+    const { address, email, phone } = useCompany()
+    const addr  = address.value.trim()
+    const eml   = email.value.trim()
+    const ph    = phone.value.trim()
+    const addrHtml  = addr ? `<div class="party-detail">${escHtml(addr)}</div>` : ''
+    const emailHtml = eml  ? `<div class="party-detail">${escHtml(eml)}</div>` : ''
+    const phoneHtml = ph   ? `<div class="party-detail">${escHtml(ph)}</div>` : ''
+
+    const QUOTE_STYLES = INVOICE_STYLES.replace('#e94560', '#4a90d9').replace('#e94560', '#4a90d9')
+
+    const win = window.open('', '_blank')
+    if (!win) return
+    win.document.write(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>${escHtml(quoteNo)}</title>
+  <style>${QUOTE_STYLES}</style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <div class="biz-name">${biz}</div>
+      <div class="biz-sub">3D Printing Services</div>
+    </div>
+    <div class="inv-meta">
+      <h2>QUOTE</h2>
+      <p>${escHtml(quoteNo)}</p>
+      <p>${date}</p>
+    </div>
+  </div>
+  <div class="parties">
+    <div class="party"><h3>From</h3><p>${biz}</p>${addrHtml}${emailHtml}${phoneHtml}</div>
+    <div class="party"><h3>Quoted For</h3><p>${cust}</p></div>
+  </div>
+  <table>
+    <thead><tr><th>Description</th><th class="amount">&pound; Amount</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <table class="totals">
+    <tr class="grand"><td class="lbl">Quote Total</td><td class="val">&pound;${grandTotal.toFixed(2)}</td></tr>
+  </table>
+  <div class="footer">This is a quote only — no payment is due until the work is confirmed.</div>
+  <br/>
+  <div class="no-print" style="text-align:center;">
+    <button onclick="window.print()" style="padding:12px 32px;background:#4a90d9;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;">
+      Print / Save as PDF
+    </button>
+  </div>
+</body>
+</html>`)
+    win.document.close()
+  }
+
+  return { generateInvoice, generateQuote }
 }

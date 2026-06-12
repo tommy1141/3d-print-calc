@@ -66,6 +66,68 @@ app.post('/api/invoices', (req, res) => {
 // Settings persistence
 const SETTINGS_FILE = join(DATA_DIR, 'settings.json')
 
+// ── Quotes ────────────────────────────────────────────────────────
+const QUOTES_FILE = join(DATA_DIR, 'quotes.json')
+
+function readQuotes() {
+  if (!existsSync(QUOTES_FILE)) return []
+  try { return JSON.parse(readFileSync(QUOTES_FILE, 'utf8')) } catch { return [] }
+}
+function writeQuotes(quotes) {
+  writeFileSync(QUOTES_FILE, JSON.stringify(quotes, null, 2))
+}
+function nextQuoteNo() {
+  const quotes = readQuotes()
+  const max = quotes.reduce((h, q) => {
+    const n = parseInt((q.quoteNo || '').replace('QUO-', ''), 10)
+    return isNaN(n) ? h : Math.max(h, n)
+  }, 0)
+  return 'QUO-' + String(max + 1).padStart(5, '0')
+}
+
+app.get('/api/quotes', (_req, res) => res.json(readQuotes()))
+
+app.post('/api/quotes', (req, res) => {
+  const quoteNo = nextQuoteNo()
+  const date    = new Date().toLocaleDateString('en-GB')
+  const quote   = { ...req.body, quoteNo, date, savedAt: new Date().toISOString(), status: 'pending' }
+  const quotes  = readQuotes()
+  quotes.unshift(quote)
+  writeQuotes(quotes)
+  res.json({ ok: true, quoteNo, date })
+})
+
+app.patch('/api/quotes/:quoteNo', (req, res) => {
+  const quotes = readQuotes()
+  const q = quotes.find(q => q.quoteNo === req.params.quoteNo)
+  if (!q) return res.status(404).json({ error: 'Not found' })
+  Object.assign(q, req.body)
+  writeQuotes(quotes)
+  res.json({ ok: true })
+})
+
+app.delete('/api/quotes/:quoteNo', (req, res) => {
+  writeQuotes(readQuotes().filter(q => q.quoteNo !== req.params.quoteNo))
+  res.json({ ok: true })
+})
+
+// Convert quote → invoice (marks quote as converted, creates invoice)
+app.post('/api/quotes/:quoteNo/convert', (req, res) => {
+  const quotes = readQuotes()
+  const q = quotes.find(q => q.quoteNo === req.params.quoteNo)
+  if (!q) return res.status(404).json({ error: 'Not found' })
+  const invoiceNo = nextInvoiceNo()
+  const date      = new Date().toLocaleDateString('en-GB')
+  const invoice   = { ...q, invoiceNo, date, savedAt: new Date().toISOString(), paid: false }
+  delete invoice.quoteNo; delete invoice.status; delete invoice.convertedToInvoice
+  const invoices = readInvoices()
+  invoices.unshift(invoice)
+  writeInvoices(invoices)
+  q.status = 'accepted'
+  q.convertedToInvoice = invoiceNo
+  writeQuotes(quotes)
+  res.json({ ok: true, invoiceNo, date })
+})
 app.get('/api/settings', (_req, res) => {
   if (!existsSync(SETTINGS_FILE)) return res.json({})
   try { res.json(JSON.parse(readFileSync(SETTINGS_FILE, 'utf8'))) }

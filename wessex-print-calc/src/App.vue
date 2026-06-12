@@ -4,6 +4,7 @@ import { useCalculator } from '@/composables/useCalculator'
 import { useOrderList }  from '@/composables/useOrderList'
 import { useInvoice }    from '@/composables/useInvoice'
 import { useInvoiceStore } from '@/composables/useInvoiceStore'
+import { useQuoteStore }   from '@/composables/useQuoteStore'
 import NavBar            from '@/components/NavBar.vue'
 import CalculatorForm    from '@/components/CalculatorForm.vue'
 import CompanySetup      from '@/components/CompanySetup.vue'
@@ -12,6 +13,8 @@ import CostResult        from '@/components/CostResult.vue'
 import OrderList         from '@/components/OrderList.vue'
 import InvoicePreview    from '@/components/InvoicePreview.vue'
 import InvoiceHistory    from '@/components/InvoiceHistory.vue'
+import QuoteHistory      from '@/components/QuoteHistory.vue'
+import QuotePreview      from '@/components/QuotePreview.vue'
 import StatsView         from '@/components/StatsView.vue'
 import InventoryView     from '@/components/InventoryView.vue'
 import StockJobForm      from '@/components/StockJobForm.vue'
@@ -66,9 +69,11 @@ function rememberCustomer(name: string) {
 const { invItems, listTotal, addItem, removeItem, clearAll } = useOrderList()
 const { generateInvoice } = useInvoice()
 const { addInvoice: addInvoiceToStore } = useInvoiceStore()
+const { addQuote: addQuoteToStore } = useQuoteStore()
 
-// Snapshot of items used to generate the current invoice preview
+// Snapshot of items used to generate the current invoice/quote preview
 const invoicedItems = ref<InvItem[]>([])
+const quotedItems   = ref<InvItem[]>([])
 const { prices, costPrices, selectedType } = useFilaments()
 const { address: cAddr, email: cEmail, phone: cPhone } = useCompany()
 const { deductPartStock, deductFilament, restorePartStock, restoreFilament } = useInventory()
@@ -278,6 +283,67 @@ async function onInvoice() {
   activeView.value = 'invoice'
 }
 
+const quoteNo   = ref('')
+const quoteDate = ref('')
+
+async function onQuote() {
+  if (invItems.value.length === 0) {
+    alert('Please add at least one item to the order first.')
+    return
+  }
+  const normalizedCustomer = normalizeCustomerName(customerName.value)
+  if (normalizedCustomer) {
+    customerName.value = normalizedCustomer
+    rememberCustomer(normalizedCustomer)
+  }
+  const quoteCustomer = normalizedCustomer || 'Customer'
+  const quoteItems = invItems.value.map(i => ({
+    job:          i.qty > 1 ? `${i.job} ×${i.qty}` : i.job,
+    sellingPrice: i.sellingPrice,
+    filamentCost: i.filamentCost,
+    powerCost:    i.powerCost,
+    labourCost:   i.labourCost,
+    profit:       i.profit,
+  }))
+
+  try {
+    const res  = await fetch('/api/quotes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        business:   businessName.value || 'My 3D Print Shop',
+        customer:   quoteCustomer,
+        items:      quoteItems,
+        grandTotal: invItems.value.reduce((s, i) => s + i.sellingPrice, 0),
+      }),
+    })
+    const data = await res.json()
+    quoteNo.value   = data.quoteNo
+    quoteDate.value = data.date
+  } catch {
+    quoteNo.value   = 'QUO-LOCAL'
+    quoteDate.value = new Date().toLocaleDateString('en-GB')
+  }
+
+  // Snapshot for preview — quotes do NOT clear the order or deduct stock
+  quotedItems.value = [...invItems.value]
+  addQuoteToStore({
+    quoteNo:    quoteNo.value,
+    date:       quoteDate.value,
+    business:   businessName.value || 'My 3D Print Shop',
+    customer:   quoteCustomer,
+    items:      quoteItems,
+    grandTotal: quotedItems.value.reduce((s, i) => s + i.sellingPrice, 0),
+    savedAt:    new Date().toISOString(),
+    status:     'pending',
+  })
+  activeView.value = 'quote-preview'
+}
+
+function onPrintQuote() {
+  generateQuote(quotedItems.value, businessName.value, customerName.value, quoteNo.value, quoteDate.value)
+}
+
 function onPrintInvoice(showPaymentDetails: boolean) {
   generateInvoice(invoicedItems.value, businessName.value, customerName.value, invoiceNo.value, invoiceDate.value, showPaymentDetails)
 }
@@ -352,6 +418,7 @@ function onPrintInvoice(showPaymentDetails: boolean) {
               @update-qty="onUpdateQty"
               @clear="onCancelOrder"
               @invoice="onInvoice"
+              @quote="onQuote"
             />
           </div>
         </div>
@@ -390,6 +457,26 @@ function onPrintInvoice(showPaymentDetails: boolean) {
           @back="activeView = 'calculator'"
           @print="onPrintInvoice"
         />
+      </div>
+
+      <!-- ── Quote preview ── -->
+      <div v-else-if="activeView === 'quote-preview'" class="invoice-layout">
+        <QuotePreview
+          :items="quotedItems"
+          :business="businessName"
+          :customer="customerName"
+          :quote-no="quoteNo"
+          :date="quoteDate"
+          @back="activeView = 'calculator'"
+          @print="onPrintQuote"
+        />
+      </div>
+
+      <!-- ── Quote history ── -->
+      <div v-else-if="activeView === 'quotes'" class="setup-layout">
+        <div class="panel">
+          <QuoteHistory />
+        </div>
       </div>
 
       <!-- ── Invoice history ── -->

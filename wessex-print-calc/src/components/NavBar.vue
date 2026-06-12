@@ -47,6 +47,13 @@ function go(view: NavView) {
         </button>
         <button
           class="nav-tab"
+          :class="{ active: activeView === 'quotes' }"
+          @click="go('quotes')"
+        >
+          📝 Quotes
+        </button>
+        <button
+          class="nav-tab"
           :class="{ active: activeView === 'invoices' }"
           @click="go('invoices')"
         >

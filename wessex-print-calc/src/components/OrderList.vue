@@ -7,10 +7,11 @@ defineProps<{
 }>()
 
 const emit = defineEmits<{
-  remove:     [index: number]
+  remove:       [index: number]
   'update-qty': [index: number, qty: number]
-  clear:      []
-  invoice:    []
+  clear:        []
+  invoice:      []
+  quote:        []
 }>()
 </script>
 
@@ -33,8 +34,9 @@ const emit = defineEmits<{
       <span class="order-total-label">Order Total</span>
       <span class="order-total-value">{{ total }}</span>
     </div>
-    <button class="btn-invoice" @click="emit('invoice')">&#x1F4C4; Generate Invoice PDF</button>
-    <button class="btn-clear" @click="emit('clear')">&#x2715; Cancel Order</button>
+    <button class="btn-invoice" @click="emit('invoice')">📄 Generate Invoice PDF</button>
+    <button class="btn-quote" @click="emit('quote')">📝 Save as Quote</button>
+    <button class="btn-clear" @click="emit('clear')">✕ Cancel Order</button>
   </div>
 </template>
 
@@ -154,6 +156,21 @@ const emit = defineEmits<{
   margin-top: 14px;
 }
 .btn-invoice:hover { background: #4caf50; color: #fff; }
+
+.btn-quote {
+  width: 100%;
+  padding: 10px;
+  background: transparent;
+  border: 2px solid #4a90d9;
+  border-radius: 8px;
+  color: #4a90d9;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  margin-top: 8px;
+}
+.btn-quote:hover { background: #4a90d9; color: #fff; }
 
 .btn-clear {
   width: 100%;

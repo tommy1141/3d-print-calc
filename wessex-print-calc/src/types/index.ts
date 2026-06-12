@@ -14,6 +14,11 @@ export interface SavedQuote {
     powerCost?: number
     labourCost?: number
     profit?: number
+    // Stock restoration fields
+    partId?: string
+    filamentType?: string
+    printGrams?: number
+    qty?: number
   }[]
   grandTotal: number
   savedAt: string

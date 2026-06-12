@@ -1,27 +1,46 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useQuoteStore } from '@/composables/useQuoteStore'
 import { useInvoiceStore } from '@/composables/useInvoiceStore'
 import { useInvoice } from '@/composables/useInvoice'
-import type { SavedQuote, QuoteStatus } from '@/types'
-
-const emit = defineEmits<{ reprint: [quote: SavedQuote] }>()
+import { useInventory } from '@/composables/useInventory'
+import type { SavedQuote } from '@/types'
+import type { FilamentType } from '@/composables/useFilaments'
 
 const { quotes, loading, apiError, fetchQuotes, setStatus, deleteQuote, convertToInvoice } = useQuoteStore()
 const { addInvoice } = useInvoiceStore()
 const { generateQuote } = useInvoice()
+const { restorePartStock, restoreFilament } = useInventory()
 
 onMounted(() => fetchQuotes())
+
+// Track which row is showing the accept/decline choice
+const awaitingDecision = ref<string | null>(null)
+
+function restoreStock(q: SavedQuote) {
+  for (const item of q.items) {
+    if (item.partId && item.qty) restorePartStock(item.partId, item.qty)
+    if (item.filamentType && item.printGrams) restoreFilament(item.filamentType as FilamentType, item.printGrams)
+  }
+}
 
 function reprint(q: SavedQuote) {
   generateQuote(q.items, q.business, q.customer, q.quoteNo, q.date)
 }
 
-async function handleConvert(q: SavedQuote) {
-  if (!confirm(`Convert ${q.quoteNo} to an invoice? This will deduct stock.`)) return
+function onStatusClick(q: SavedQuote) {
+  if (q.status === 'pending') {
+    setStatus(q, 'sent')
+  } else if (q.status === 'sent') {
+    // Show accept / decline choice inline
+    awaitingDecision.value = q.quoteNo
+  }
+}
+
+async function handleAccept(q: SavedQuote) {
+  awaitingDecision.value = null
   const result = await convertToInvoice(q)
   if (result) {
-    // Add to invoice store so Invoices tab shows it immediately
     addInvoice({
       invoiceNo: result.invoiceNo,
       date:      result.date,
@@ -36,22 +55,23 @@ async function handleConvert(q: SavedQuote) {
   }
 }
 
+async function handleDecline(q: SavedQuote) {
+  awaitingDecision.value = null
+  restoreStock(q)
+  await setStatus(q, 'declined')
+}
+
 async function handleDelete(q: SavedQuote) {
   if (!confirm(`Delete ${q.quoteNo}? This cannot be undone.`)) return
+  restoreStock(q)
   await deleteQuote(q.quoteNo)
 }
 
-const STATUS_CYCLE: QuoteStatus[] = ['pending', 'sent', 'accepted', 'declined']
-const STATUS_LABELS: Record<QuoteStatus, string> = {
+const STATUS_LABELS: Record<string, string> = {
   pending:  '⏳ Pending',
   sent:     '📤 Sent',
   accepted: '✅ Accepted',
   declined: '❌ Declined',
-}
-
-function nextStatus(q: SavedQuote) {
-  const idx = STATUS_CYCLE.indexOf(q.status)
-  return STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length]
 }
 </script>
 
@@ -88,18 +108,28 @@ function nextStatus(q: SavedQuote) {
             <td>{{ q.customer }}</td>
             <td class="amount">£{{ Number(q.grandTotal).toFixed(2) }}</td>
             <td>
-              <button class="btn-status" :class="`status-${q.status}`" @click="setStatus(q, nextStatus(q))">
+              <!-- Pending / Sent: clickable button -->
+              <template v-if="q.status === 'pending' || q.status === 'sent'">
+                <template v-if="awaitingDecision === q.quoteNo">
+                  <div class="decision-btns">
+                    <button class="btn-accept" @click="handleAccept(q)">✅ Accept</button>
+                    <button class="btn-decline" @click="handleDecline(q)">❌ Decline</button>
+                    <button class="btn-cancel-decision" @click="awaitingDecision = null">✕</button>
+                  </div>
+                </template>
+                <template v-else>
+                  <button class="btn-status" :class="`status-${q.status}`" @click="onStatusClick(q)">
+                    {{ STATUS_LABELS[q.status] }}
+                  </button>
+                </template>
+              </template>
+              <!-- Accepted / Declined: static label -->
+              <span v-else class="btn-status" :class="`status-${q.status}`" style="cursor:default">
                 {{ STATUS_LABELS[q.status] }}
-              </button>
+              </span>
             </td>
             <td class="actions-cell">
               <button class="btn-reprint" @click="reprint(q)" title="Reprint quote PDF">🖨️</button>
-              <button
-                v-if="!q.convertedToInvoice && q.status !== 'declined'"
-                class="btn-convert"
-                @click="handleConvert(q)"
-                title="Convert to Invoice"
-              >📄→🧾</button>
               <span v-if="q.convertedToInvoice" class="converted-tag" :title="`Invoice: ${q.convertedToInvoice}`">
                 {{ q.convertedToInvoice }}
               </span>
@@ -162,6 +192,25 @@ tbody td { padding: 10px 14px; color: #c8d0e0; }
 .status-declined { background: #3a1a1a; color: #e94560; }
 
 .actions-cell { display: flex; gap: 6px; align-items: center; }
+
+.decision-btns { display: flex; gap: 5px; align-items: center; }
+
+.btn-accept, .btn-decline, .btn-cancel-decision {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: opacity 0.15s;
+  white-space: nowrap;
+}
+.btn-accept { background: #1a3a1a; color: #4caf50; }
+.btn-accept:hover { background: #2a5a2a; }
+.btn-decline { background: #3a1a1a; color: #e94560; }
+.btn-decline:hover { background: #5a2a2a; }
+.btn-cancel-decision { background: #1a2a3a; color: #7090b0; padding: 4px 7px; }
+.btn-cancel-decision:hover { background: #2a3a4a; }
 
 .btn-reprint, .btn-delete, .btn-convert {
   padding: 5px 8px;

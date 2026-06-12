@@ -310,6 +310,11 @@ async function onQuote() {
     powerCost:    i.powerCost,
     labourCost:   i.labourCost,
     profit:       i.profit,
+    // Stock restoration fields
+    partId:       i.partId,
+    filamentType: i.filamentType,
+    printGrams:   i.printGrams,
+    qty:          i.qty,
   }))
 
   try {

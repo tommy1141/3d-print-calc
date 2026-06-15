@@ -10,17 +10,17 @@ import type { FilamentType } from '@/composables/useFilaments'
 const { quotes, loading, apiError, fetchQuotes, setStatus, deleteQuote, convertToInvoice } = useQuoteStore()
 const { addInvoice } = useInvoiceStore()
 const { generateQuote } = useInvoice()
-const { restorePartStock, restoreFilament } = useInventory()
+const { deductPartStock, deductFilament } = useInventory()
 
 onMounted(() => fetchQuotes())
 
 // Track which row is showing the accept/decline choice
 const awaitingDecision = ref<string | null>(null)
 
-function restoreStock(q: SavedQuote) {
+function deductStock(q: SavedQuote) {
   for (const item of q.items) {
-    if (item.partId && item.qty) restorePartStock(item.partId, item.qty)
-    if (item.filamentType && item.printGrams) restoreFilament(item.filamentType as FilamentType, item.printGrams)
+    if (item.partId && item.qty) deductPartStock(item.partId, item.qty)
+    if (item.filamentType && item.printGrams) deductFilament(item.filamentType as FilamentType, item.printGrams)
   }
 }
 
@@ -41,6 +41,8 @@ async function handleAccept(q: SavedQuote) {
   awaitingDecision.value = null
   const result = await convertToInvoice(q)
   if (result) {
+    // Quote is now a committed invoice — deduct stock
+    deductStock(q)
     addInvoice({
       invoiceNo: result.invoiceNo,
       date:      result.date,
@@ -57,13 +59,11 @@ async function handleAccept(q: SavedQuote) {
 
 async function handleDecline(q: SavedQuote) {
   awaitingDecision.value = null
-  restoreStock(q)
   await setStatus(q, 'declined')
 }
 
 async function handleDelete(q: SavedQuote) {
   if (!confirm(`Delete ${q.quoteNo}? This cannot be undone.`)) return
-  restoreStock(q)
   await deleteQuote(q.quoteNo)
 }
 

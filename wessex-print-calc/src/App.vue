@@ -77,7 +77,7 @@ const invoicedItems = ref<InvItem[]>([])
 const quotedItems   = ref<InvItem[]>([])
 const { prices, costPrices, selectedType } = useFilaments()
 const { address: cAddr, email: cEmail, phone: cPhone } = useCompany()
-const { deductPartStock, deductFilament, restorePartStock, restoreFilament } = useInventory()
+const { deductPartStock, deductFilament } = useInventory()
 
 // Invoicing mode: 'custom' = manual form, 'stock' = pick from inventory parts
 const invoicingMode = ref<'custom' | 'stock'>('custom')
@@ -172,16 +172,11 @@ function addToOrder(qty: number = 1) {
     printGrams:   base.printGrams   * qty,
   }
   addItem(item)
-  if (stockPartId.value) deductPartStock(stockPartId.value, qty)
-  deductFilament(selectedType.value, base.printGrams * qty)
   stockPartId.value = null
   resetJobFields()
 }
 
 function onRemoveItem(index: number) {
-  const item = invItems.value[index]
-  if (item.partId) restorePartStock(item.partId, item.qty)
-  restoreFilament(item.filamentType as any, item.printGrams)
   invItems.value.splice(index, 1)
 }
 
@@ -191,15 +186,6 @@ function onUpdateQty(index: number, newQty: number) {
   const oldQty = item.qty
   if (newQty === oldQty) return
   const gramsPerUnit = item.printGrams / oldQty
-  const delta = oldQty - newQty
-  if (delta > 0) {
-    if (item.partId) restorePartStock(item.partId, delta)
-    restoreFilament(item.filamentType as any, gramsPerUnit * delta)
-  } else {
-    const add = -delta
-    if (item.partId) deductPartStock(item.partId, add)
-    deductFilament(item.filamentType as any, gramsPerUnit * add)
-  }
   const scale = newQty / oldQty
   invItems.value.splice(index, 1, {
     ...item,
@@ -215,10 +201,6 @@ function onUpdateQty(index: number, newQty: number) {
 }
 
 function onCancelOrder() {
-  for (const item of invItems.value) {
-    if (item.partId) restorePartStock(item.partId, item.qty)
-    restoreFilament(item.filamentType as any, item.printGrams)
-  }
   invItems.value = []
 }
 
@@ -263,6 +245,11 @@ async function onInvoice() {
   // Snapshot items for the preview, then clear without confirm dialog
   invoicedItems.value = [...invItems.value]
   invItems.value = []
+  // Committing to an invoice — deduct stock now
+  for (const item of invoicedItems.value) {
+    if (item.partId) deductPartStock(item.partId, item.qty)
+    deductFilament(item.filamentType as any, item.printGrams)
+  }
   // Add to the shared invoice store so the Invoices tab updates immediately
   addInvoiceToStore({
     invoiceNo: invoiceNo.value,

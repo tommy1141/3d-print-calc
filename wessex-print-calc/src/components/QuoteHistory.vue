@@ -1,28 +1,22 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useQuoteStore } from '@/composables/useQuoteStore'
-import { useInvoiceStore } from '@/composables/useInvoiceStore'
+import { useDeliveryNoteStore } from '@/composables/useDeliveryNoteStore'
 import { useInvoice } from '@/composables/useInvoice'
 import { useInventory } from '@/composables/useInventory'
 import type { SavedQuote } from '@/types'
 import type { FilamentType } from '@/composables/useFilaments'
 
-const { quotes, loading, apiError, fetchQuotes, setStatus, deleteQuote, convertToInvoice } = useQuoteStore()
-const { addInvoice } = useInvoiceStore()
-const { generateQuote } = useInvoice()
+const { quotes, loading, apiError, fetchQuotes, setStatus, deleteQuote } = useQuoteStore()
+const { addDeliveryNote } = useDeliveryNoteStore()
+const { generateQuote, generateDeliveryNote } = useInvoice()
 const { deductPartStock, deductFilament } = useInventory()
 
 onMounted(() => fetchQuotes())
 
-// Track which row is showing the accept/decline choice
 const awaitingDecision = ref<string | null>(null)
-
-function deductStock(q: SavedQuote) {
-  for (const item of q.items) {
-    if (item.partId && item.qty) deductPartStock(item.partId, item.qty)
-    if (item.filamentType && item.printGrams) deductFilament(item.filamentType as FilamentType, item.printGrams)
-  }
-}
+const poNumberInput    = ref('')
+const poDueDateInput   = ref('')
 
 function reprint(q: SavedQuote) {
   generateQuote(q.items, q.business, q.customer, q.quoteNo, q.date)
@@ -32,39 +26,79 @@ function onStatusClick(q: SavedQuote) {
   if (q.status === 'pending') {
     setStatus(q, 'sent')
   } else if (q.status === 'sent') {
-    // Show accept / decline choice inline
     awaitingDecision.value = q.quoteNo
+    poNumberInput.value  = ''
+    poDueDateInput.value = ''
   }
+}
+
+function cancelDecision() {
+  awaitingDecision.value = null
+  poNumberInput.value  = ''
+  poDueDateInput.value = ''
 }
 
 async function handleAccept(q: SavedQuote) {
-  awaitingDecision.value = null
-  const result = await convertToInvoice(q)
-  if (result) {
-    // Quote is now a committed invoice — deduct stock
-    deductStock(q)
-    addInvoice({
-      invoiceNo: result.invoiceNo,
-      date:      result.date,
-      business:  q.business,
-      customer:  q.customer,
-      items:     q.items,
-      grandTotal: q.grandTotal,
-      savedAt:   new Date().toISOString(),
-      paid:      false,
-    })
-    alert(`Converted to ${result.invoiceNo}`)
-  }
+  const poNumber  = poNumberInput.value.trim() || undefined
+  const poDueDate = poDueDateInput.value || undefined
+  cancelDecision()
+  await setStatus(q, 'accepted', { poNumber, poDueDate })
 }
 
 async function handleDecline(q: SavedQuote) {
-  awaitingDecision.value = null
+  cancelDecision()
   await setStatus(q, 'declined')
 }
 
 async function handleDelete(q: SavedQuote) {
   if (!confirm(`Delete ${q.quoteNo}? This cannot be undone.`)) return
   await deleteQuote(q.quoteNo)
+}
+
+async function handleGenerateDeliveryNote(q: SavedQuote) {
+  if (!confirm(`Generate delivery note for ${q.quoteNo}? This will deduct stock.`)) return
+
+  // Deduct stock for each line item
+  for (const item of q.items) {
+    if (item.partId && item.qty) deductPartStock(item.partId, item.qty)
+    if (item.filamentType && item.printGrams) deductFilament(item.filamentType as FilamentType, item.printGrams)
+  }
+
+  const res = await fetch('/api/delivery-notes', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      quoteNo:    q.quoteNo,
+      business:   q.business,
+      customer:   q.customer,
+      items:      q.items,
+      grandTotal: q.grandTotal,
+      poNumber:   q.poNumber,
+      poDueDate:  q.poDueDate,
+    }),
+  })
+  const data = await res.json()
+
+  // Update local quote to show DN tag (server already updated quotes.json atomically)
+  const idx = quotes.value.findIndex(x => x.quoteNo === q.quoteNo)
+  if (idx !== -1) {
+    quotes.value.splice(idx, 1, { ...quotes.value[idx], convertedToDelivery: data.deliveryNo })
+  }
+
+  addDeliveryNote({
+    deliveryNo:  data.deliveryNo,
+    quoteNo:     q.quoteNo,
+    date:        data.date,
+    business:    q.business,
+    customer:    q.customer,
+    items:       q.items,
+    grandTotal:  q.grandTotal,
+    savedAt:     new Date().toISOString(),
+    poNumber:    q.poNumber,
+    poDueDate:   q.poDueDate,
+  })
+
+  generateDeliveryNote(q.items, q.business, q.customer, data.deliveryNo, data.date, q.quoteNo, q.poNumber, q.poDueDate)
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -112,9 +146,11 @@ const STATUS_LABELS: Record<string, string> = {
               <template v-if="q.status === 'pending' || q.status === 'sent'">
                 <template v-if="awaitingDecision === q.quoteNo">
                   <div class="decision-btns">
+                    <input type="text" v-model="poNumberInput" placeholder="PO # (optional)" class="po-input" />
+                    <input type="date" v-model="poDueDateInput" class="po-input po-date" title="PO due date (optional)" />
                     <button class="btn-accept" @click="handleAccept(q)">✅ Accept</button>
                     <button class="btn-decline" @click="handleDecline(q)">❌ Decline</button>
-                    <button class="btn-cancel-decision" @click="awaitingDecision = null">✕</button>
+                    <button class="btn-cancel-decision" @click="cancelDecision">✕</button>
                   </div>
                 </template>
                 <template v-else>
@@ -124,15 +160,28 @@ const STATUS_LABELS: Record<string, string> = {
                 </template>
               </template>
               <!-- Accepted / Declined: static label -->
-              <span v-else class="btn-status" :class="`status-${q.status}`" style="cursor:default">
-                {{ STATUS_LABELS[q.status] }}
-              </span>
+              <template v-else>
+                <span class="btn-status" :class="`status-${q.status}`" style="cursor:default">
+                  {{ STATUS_LABELS[q.status] }}
+                </span>
+                <div v-if="q.status === 'accepted' && q.poNumber" class="po-tag">
+                  PO: {{ q.poNumber }}<span v-if="q.poDueDate"> · due {{ q.poDueDate }}</span>
+                </div>
+              </template>
             </td>
             <td class="actions-cell">
               <button class="btn-reprint" @click="reprint(q)" title="Reprint quote PDF">🖨️</button>
+              <!-- Legacy: quotes converted directly to invoice before this workflow existed -->
               <span v-if="q.convertedToInvoice" class="converted-tag" :title="`Invoice: ${q.convertedToInvoice}`">
                 {{ q.convertedToInvoice }}
               </span>
+              <!-- New workflow: delivery note generated from accepted quote -->
+              <span v-else-if="q.convertedToDelivery" class="converted-tag" :title="`Delivery Note: ${q.convertedToDelivery}`">
+                {{ q.convertedToDelivery }}
+              </span>
+              <button v-else-if="q.status === 'accepted'" class="btn-convert" @click="handleGenerateDeliveryNote(q)" title="Generate delivery note">
+                📦 Generate Delivery Note
+              </button>
               <button class="btn-delete" @click="handleDelete(q)" title="Delete">🗑️</button>
             </td>
           </tr>
@@ -191,9 +240,28 @@ tbody td { padding: 10px 14px; color: #c8d0e0; }
 .status-accepted { background: #1a3a1a; color: #4caf50; }
 .status-declined { background: #3a1a1a; color: #e94560; }
 
-.actions-cell { display: flex; gap: 6px; align-items: center; }
+.po-tag {
+  font-size: 0.7rem;
+  color: #7090b0;
+  margin-top: 4px;
+}
 
-.decision-btns { display: flex; gap: 5px; align-items: center; }
+.actions-cell { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+
+.decision-btns { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; }
+
+.po-input {
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  border-radius: 6px;
+  border: 1px solid #2a3a4a;
+  background: #1a2a3a;
+  color: #c8d0e0;
+  outline: none;
+  width: 110px;
+}
+.po-input:focus { border-color: #4a90d9; }
+.po-date { width: 132px; }
 
 .btn-accept, .btn-decline, .btn-cancel-decision {
   padding: 4px 10px;
@@ -222,7 +290,7 @@ tbody td { padding: 10px 14px; color: #c8d0e0; }
 }
 .btn-reprint { background: #1a4a7a; color: #e0e8f0; }
 .btn-reprint:hover { background: #2a6aaa; }
-.btn-convert { background: #1a3a2a; color: #4caf50; }
+.btn-convert { background: #1a3a2a; color: #4caf50; font-size: 0.75rem; }
 .btn-convert:hover { background: #2a5a3a; }
 .btn-delete { background: none; border: 1px solid #3a2a3a; color: #e94560; }
 .btn-delete:hover { background: #e94560; color: #fff; border-color: #e94560; }

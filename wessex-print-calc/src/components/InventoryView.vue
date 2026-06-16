@@ -3,7 +3,7 @@ import { ref, watch, computed } from 'vue'
 import { useInventory } from '@/composables/useInventory'
 import { useFilaments, FILAMENT_LABELS, FILAMENT_KEYS } from '@/composables/useFilaments'
 import type { FilamentType } from '@/composables/useFilaments'
-import type { PartDefinition, FilamentSpool } from '@/composables/useInventory'
+import type { PartDefinition, FilamentSpool, PartFilamentType } from '@/composables/useInventory'
 
 const { spools, parts, addSpool, updateSpoolGrams, updateSpool, setSpoolRolls, deleteSpool, addPart, updatePart, printBatch, deletePart } = useInventory()
 const { costPrices, brands, brandCostPrices } = useFilaments()
@@ -61,7 +61,7 @@ function submitFilament() {
 
 // ── Part create form ───────────────────────────────────────────────
 const pName       = ref('')
-const pType       = ref<FilamentType>('pla_plus')
+const pType       = ref<PartFilamentType>('pla_plus')
 const pGrams      = ref<number | null>(null)
 const pHours      = ref<number | null>(0)
 const pMins       = ref<number | null>(0)
@@ -90,7 +90,7 @@ function submitPart() {
 // ── Part edit ─────────────────────────────────────────────────────
 const editingPart = ref<PartDefinition | null>(null)
 const epName       = ref('')
-const epType       = ref<FilamentType>('pla_plus')
+const epType       = ref<PartFilamentType>('pla_plus')
 const epGrams      = ref<number | null>(null)
 const epHours      = ref<number | null>(0)
 const epMins       = ref<number | null>(0)
@@ -129,7 +129,7 @@ function saveEditPart() {
 }
 
 // ── Helpers ────────────────────────────────────────────────────────
-function typeLabel(t: FilamentType) { return FILAMENT_LABELS[t] }
+function typeLabel(t: PartFilamentType) { return t === 'any' ? 'Any' : FILAMENT_LABELS[t] }
 
 function gramsDisplay(g: number) {
   return g >= 1000 ? `${(g / 1000).toFixed(2)} rolls (${Math.round(g)}g)` : `${Math.round(g)}g`
@@ -139,14 +139,22 @@ function batchDeductGrams(p: PartDefinition): number {
   return p.batchFilamentGrams ?? p.gramsPerUnit * p.batchSize
 }
 
+// For 'any'-filament parts, which spool type to deduct from when logging a batch
+const batchFilamentChoice = ref<Record<string, FilamentType>>({})
+
+function batchType(p: PartDefinition): FilamentType {
+  return p.filamentType === 'any' ? (batchFilamentChoice.value[p.id] ?? FILAMENT_KEYS[0]) : p.filamentType
+}
+
 function doPrintBatch(partId: string) {
   const part = parts.value.find(p => p.id === partId)
   if (!part) return
+  const type = batchType(part)
   const gramsNeeded = batchDeductGrams(part)
-  const avail = spools.value.filter(s => s.type === part.filamentType).reduce((sum, s) => sum + s.grams, 0)
+  const avail = spools.value.filter(s => s.type === type).reduce((sum, s) => sum + s.grams, 0)
   const warn = avail < gramsNeeded ? `\n⚠️ Only ${Math.round(avail)}g available — ${Math.round(gramsNeeded)}g needed.` : ''
-  if (!confirm(`Log a batch of ${part.batchSize}× "${part.name}"?\nDeducts ~${Math.round(gramsNeeded)}g of ${typeLabel(part.filamentType)}.${warn}`)) return
-  printBatch(partId)
+  if (!confirm(`Log a batch of ${part.batchSize}× "${part.name}"?\nDeducts ~${Math.round(gramsNeeded)}g of ${typeLabel(type)}.${warn}`)) return
+  printBatch(partId, type)
 }
 
 function confirmDeleteSpool(id: string) {
@@ -303,6 +311,7 @@ const suggestedCost = computed(() => {
           <div class="field-g">
             <label>Filament type</label>
             <select v-model="pType" class="inv-select">
+              <option value="any">🔀 Any filament</option>
               <option v-for="k in FILAMENT_KEYS" :key="k" :value="k">{{ typeLabel(k) }}</option>
             </select>
           </div>
@@ -393,6 +402,7 @@ const suggestedCost = computed(() => {
           <div class="field-g">
             <label>Filament type</label>
             <select v-model="epType" class="inv-select">
+              <option value="any">🔀 Any filament</option>
               <option v-for="k in FILAMENT_KEYS" :key="k" :value="k">{{ typeLabel(k) }}</option>
             </select>
           </div>
@@ -540,7 +550,12 @@ const suggestedCost = computed(() => {
           <tbody>
             <tr v-for="p in parts" :key="p.id" :class="{ 'row-low': p.inStock === 0 }">
               <td class="name-cell">{{ p.name }}</td>
-              <td><span class="type-chip">{{ typeLabel(p.filamentType) }}</span></td>
+              <td>
+                <span class="type-chip" :class="{ 'type-chip-any': p.filamentType === 'any' }">{{ typeLabel(p.filamentType) }}</span>
+                <select v-if="p.filamentType === 'any'" class="batch-filament-select" v-model="batchFilamentChoice[p.id]" title="Filament to deduct when logging a batch">
+                  <option v-for="k in FILAMENT_KEYS" :key="k" :value="k">{{ typeLabel(k) }}</option>
+                </select>
+              </td>
               <td class="col-spec spec-cell">
                 {{ p.gramsPerUnit }}g/unit ·
                 <span v-if="p.printHoursPerUnit">{{ p.printHoursPerUnit }}h </span>{{ p.printMinsPerUnit }}m ·
@@ -664,6 +679,9 @@ const suggestedCost = computed(() => {
 .inv-table tbody td { padding: 10px 12px; color: #b0bcd0; }
 .name-cell { font-weight: 500; color: #c8d8e8; }
 .type-chip { display: inline-block; padding: 2px 8px; border-radius: 4px; background: #1a3050; color: #6090b8; font-size: 0.76rem; font-weight: 600; }
+.type-chip-any { background: rgba(74,144,217,0.15); color: #4a90d9; }
+.batch-filament-select { display: block; margin-top: 5px; width: 100%; background: #0f2040; border: 1px solid #1a3a5c; border-radius: 5px; color: #a0c0e0; font-size: 0.74rem; padding: 3px 4px; outline: none; cursor: pointer; }
+.batch-filament-select:focus { border-color: #4a90d9; }
 .col-rem  { width: 200px; }
 .col-act-s { width: 72px; text-align: right; white-space: nowrap; }
 .col-del-h { width: 44px; text-align: center; }

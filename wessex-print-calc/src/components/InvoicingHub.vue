@@ -33,6 +33,12 @@ const emit = defineEmits<{ navigate: [view: NavView] }>()
         <span class="hub-card-label">View Invoices</span>
         <span class="hub-card-desc">Browse history, mark as paid, or reprint</span>
       </button>
+
+      <button class="hub-card hub-card--delivery" @click="emit('navigate', 'delivery-notes')">
+        <span class="hub-card-icon">📦</span>
+        <span class="hub-card-label">Delivery Notes</span>
+        <span class="hub-card-desc">View delivery notes and convert to invoices</span>
+      </button>
     </div>
   </div>
 </template>
@@ -85,7 +91,8 @@ const emit = defineEmits<{ navigate: [view: NavView] }>()
 .hub-card--quote:hover  { border-color: #4a90d9; }
 .hub-card--quotes:hover { border-color: #7c5cbf; }
 .hub-card--invoice:hover  { border-color: #e94560; }
-.hub-card--invoices:hover { border-color: #4caf50; }
+.hub-card--invoices:hover  { border-color: #4caf50; }
+.hub-card--delivery:hover { border-color: #ff9800; }
 
 .hub-card-icon {
   font-size: 1.8rem;

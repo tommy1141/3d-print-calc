@@ -12,7 +12,8 @@ import MaterialsSetup    from '@/components/MaterialsSetup.vue'
 import CostResult        from '@/components/CostResult.vue'
 import OrderList         from '@/components/OrderList.vue'
 import InvoicePreview    from '@/components/InvoicePreview.vue'
-import InvoiceHistory    from '@/components/InvoiceHistory.vue'
+import InvoiceHistory        from '@/components/InvoiceHistory.vue'
+import DeliveryNoteHistory  from '@/components/DeliveryNoteHistory.vue'
 import InvoicingHub      from '@/components/InvoicingHub.vue'
 import QuoteHistory      from '@/components/QuoteHistory.vue'
 import QuotePreview      from '@/components/QuotePreview.vue'
@@ -68,7 +69,7 @@ function rememberCustomer(name: string) {
 }
 
 const { invItems, listTotal, addItem, removeItem, clearAll } = useOrderList()
-const { generateInvoice } = useInvoice()
+const { generateInvoice, generateDeliveryNote } = useInvoice()
 const { addInvoice: addInvoiceToStore } = useInvoiceStore()
 const { addQuote: addQuoteToStore } = useQuoteStore()
 
@@ -85,7 +86,10 @@ const stockPartId   = ref<string | null>(null)
 
 function onFillPart(part: PartDefinition) {
   // Auto-fill calculator state from part spec
-  selectedType.value = part.filamentType
+  // 'any' parts leave the filament choice to the user (set via the picker in StockJobForm)
+  if (part.filamentType !== 'any') {
+    selectedType.value = part.filamentType
+  }
   printGrams.value   = part.gramsPerUnit
   printHours.value   = part.printHoursPerUnit
   printMins.value    = part.printMinsPerUnit
@@ -493,6 +497,16 @@ function onPrintInvoice(showPaymentDetails: boolean) {
         </div>
         <div class="panel">
           <InvoiceHistory @reprint="(inv) => generateInvoice(inv.items, inv.business, inv.customer, inv.invoiceNo, inv.date)" />
+        </div>
+      </div>
+
+      <!-- ── Delivery Note history ── -->
+      <div v-else-if="activeView === 'delivery-notes'" class="setup-layout">
+        <div class="back-bar">
+          <button class="back-btn" @click="activeView = 'invoicing'">← Back to Invoicing</button>
+        </div>
+        <div class="panel">
+          <DeliveryNoteHistory @reprint="(dn) => generateDeliveryNote(dn.items, dn.business, dn.customer, dn.deliveryNo, dn.date, dn.quoteNo, dn.poNumber, dn.poDueDate)" />
         </div>
       </div>
 

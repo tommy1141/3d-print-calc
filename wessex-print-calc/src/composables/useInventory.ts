@@ -1,6 +1,10 @@
 import { ref, watch } from 'vue'
 import type { FilamentType } from './useFilaments'
 
+// 'any' = part can be printed in whatever filament is on hand;
+// the filament type is chosen per-job/per-batch instead of being fixed on the part.
+export type PartFilamentType = FilamentType | 'any'
+
 export interface FilamentSpool {
   id: string
   type: FilamentType
@@ -13,7 +17,7 @@ export interface FilamentSpool {
 export interface PartDefinition {
   id: string
   name: string
-  filamentType: FilamentType
+  filamentType: PartFilamentType
   gramsPerUnit: number
   printHoursPerUnit: number
   printMinsPerUnit: number
@@ -112,13 +116,16 @@ export function useInventory() {
     parts.value = parts.value.filter(p => p.id !== id)
   }
 
-  /** Log a completed batch print: adds batchSize to stock and deducts filament. */
-  function printBatch(partId: string) {
+  /** Log a completed batch print: adds batchSize to stock and deducts filament.
+   *  For 'any'-filament parts, `filamentType` selects which spool type to deduct from. */
+  function printBatch(partId: string, filamentType?: FilamentType) {
     const part = parts.value.find(p => p.id === partId)
     if (!part) return
     part.inStock += part.batchSize
+    const type = part.filamentType === 'any' ? filamentType : part.filamentType
+    if (!type) return
     // Use explicit batch filament total if set, otherwise estimate from per-unit grams
-    deductFilament(part.filamentType, part.batchFilamentGrams ?? part.gramsPerUnit * part.batchSize)
+    deductFilament(type, part.batchFilamentGrams ?? part.gramsPerUnit * part.batchSize)
   }
 
   /** Update an existing part definition (preserves id and inStock). */

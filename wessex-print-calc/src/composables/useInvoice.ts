@@ -194,5 +194,86 @@ export function useInvoice() {
     win.document.close()
   }
 
-  return { generateInvoice, generateQuote }
+  function generateDeliveryNote(
+    items: { job: string }[],
+    business: string,
+    customer: string,
+    deliveryNo: string,
+    date: string,
+    quoteNo: string,
+    poNumber?: string,
+    poDueDate?: string,
+  ) {
+    const biz  = escHtml(business || 'My 3D Print Shop')
+    const cust = escHtml(customer || 'Customer')
+    const rows = items
+      .map(item => `<tr><td>${escHtml(item.job)}</td></tr>`)
+      .join('')
+
+    const { address, email, phone } = useCompany()
+    const addr  = address.value.trim()
+    const eml   = email.value.trim()
+    const ph    = phone.value.trim()
+    const addrHtml  = addr ? `<div class="party-detail">${escHtml(addr)}</div>` : ''
+    const emailHtml = eml  ? `<div class="party-detail">${escHtml(eml)}</div>` : ''
+    const phoneHtml = ph   ? `<div class="party-detail">${escHtml(ph)}</div>` : ''
+
+    const poHtml  = poNumber  ? `<p>PO Ref: ${escHtml(poNumber)}</p>` : ''
+    const dueHtml = poDueDate ? `<p>Due: ${escHtml(poDueDate)}</p>` : ''
+
+    const DN_STYLES = INVOICE_STYLES.replace(/#e94560/g, '#4caf50')
+
+    const win = window.open('', '_blank')
+    if (!win) return
+    win.document.write(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>${escHtml(deliveryNo)}</title>
+  <style>${DN_STYLES}
+  .sig-row { display:flex; gap:80px; margin-top:64px; }
+  .sig-box { flex:1; }
+  .sig-line { border-top:1px solid #999; margin-top:48px; padding-top:6px; font-size:12px; color:#666; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <div class="biz-name">${biz}</div>
+      <div class="biz-sub">3D Printing Services</div>
+    </div>
+    <div class="inv-meta">
+      <h2>DELIVERY NOTE</h2>
+      <p>${escHtml(deliveryNo)}</p>
+      <p>${date}</p>
+      <p style="margin-top:4px;font-size:11px;color:#999;">Ref Quote: ${escHtml(quoteNo)}</p>
+      ${poHtml}${dueHtml}
+    </div>
+  </div>
+  <div class="parties">
+    <div class="party"><h3>From</h3><p>${biz}</p>${addrHtml}${emailHtml}${phoneHtml}</div>
+    <div class="party"><h3>Delivered To</h3><p>${cust}</p></div>
+  </div>
+  <table>
+    <thead><tr><th>Description</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <div class="sig-row">
+    <div class="sig-box"><div class="sig-line">Delivered By</div></div>
+    <div class="sig-box"><div class="sig-line">Received By</div></div>
+    <div class="sig-box"><div class="sig-line">Date</div></div>
+  </div>
+  <div class="footer">Please sign and retain a copy for your records.</div>
+  <br/>
+  <div class="no-print" style="text-align:center;">
+    <button onclick="window.print()" style="padding:12px 32px;background:#4caf50;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;">
+      Print / Save as PDF
+    </button>
+  </div>
+</body>
+</html>`)
+    win.document.close()
+  }
+
+  return { generateInvoice, generateQuote, generateDeliveryNote }
 }

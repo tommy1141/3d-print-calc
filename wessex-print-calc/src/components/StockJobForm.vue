@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useInventory } from '@/composables/useInventory'
-import { FILAMENT_LABELS } from '@/composables/useFilaments'
+import { useFilaments, FILAMENT_LABELS, FILAMENT_KEYS } from '@/composables/useFilaments'
 import type { PartDefinition } from '@/composables/useInventory'
 
 const emit = defineEmits<{
@@ -12,6 +12,7 @@ const emit = defineEmits<{
 }>()
 
 const { parts } = useInventory()
+const { selectedType } = useFilaments()
 
 const selectedId = ref<string>('')
 const selectedPart = computed<PartDefinition | null>(
@@ -26,8 +27,15 @@ watch(selectedId, () => {
   }
 })
 
+// For 'any'-filament parts, re-fill (and recalculate) when the user picks a filament
+watch(selectedType, () => {
+  if (selectedPart.value?.filamentType === 'any') {
+    emit('fillPart', selectedPart.value)
+  }
+})
+
 function typeLabel(p: PartDefinition) {
-  return FILAMENT_LABELS[p.filamentType]
+  return p.filamentType === 'any' ? 'Any' : FILAMENT_LABELS[p.filamentType]
 }
 </script>
 
@@ -44,8 +52,15 @@ function typeLabel(p: PartDefinition) {
       </select>
     </div>
 
+    <div v-if="selectedPart && selectedPart.filamentType === 'any'" class="sfj-field">
+      <label for="stockFilament">Filament for this job</label>
+      <select id="stockFilament" v-model="selectedType" class="sfj-select">
+        <option v-for="k in FILAMENT_KEYS" :key="k" :value="k">{{ FILAMENT_LABELS[k] }}</option>
+      </select>
+    </div>
+
     <div v-if="selectedPart" class="sfj-spec">
-      <div class="spec-row"><span class="spec-lbl">Filament</span><span class="spec-val">{{ typeLabel(selectedPart) }} · {{ selectedPart.gramsPerUnit }}g per unit</span></div>
+      <div class="spec-row"><span class="spec-lbl">Filament</span><span class="spec-val">{{ selectedPart.filamentType === 'any' ? FILAMENT_LABELS[selectedType] : typeLabel(selectedPart) }} · {{ selectedPart.gramsPerUnit }}g per unit</span></div>
       <div class="spec-row"><span class="spec-lbl">Print time</span><span class="spec-val">{{ selectedPart.printHoursPerUnit }}h {{ selectedPart.printMinsPerUnit }}m per unit</span></div>
       <div class="spec-row"><span class="spec-lbl">Labour</span><span class="spec-val">{{ selectedPart.labourMinsPerUnit }} min per unit</span></div>
       <div class="spec-row"><span class="spec-lbl">In stock</span>

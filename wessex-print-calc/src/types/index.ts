@@ -1,29 +1,33 @@
-export type NavView = 'inventory' | 'calculator' | 'setup' | 'materials' | 'invoice' | 'invoices' | 'invoicing' | 'stats' | 'quotes' | 'quote-preview'
+export type NavView = 'inventory' | 'calculator' | 'setup' | 'materials' | 'invoice' | 'invoices' | 'invoicing' | 'stats' | 'quotes' | 'quote-preview' | 'delivery-notes'
 
 export type QuoteStatus = 'pending' | 'sent' | 'accepted' | 'declined'
+
+export interface OrderItem {
+  job: string
+  sellingPrice: number
+  filamentCost?: number
+  powerCost?: number
+  labourCost?: number
+  profit?: number
+  partId?: string
+  filamentType?: string
+  printGrams?: number
+  qty?: number
+}
 
 export interface SavedQuote {
   quoteNo: string
   date: string
   business: string
   customer: string
-  items: {
-    job: string
-    sellingPrice: number
-    filamentCost?: number
-    powerCost?: number
-    labourCost?: number
-    profit?: number
-    // Stock restoration fields
-    partId?: string
-    filamentType?: string
-    printGrams?: number
-    qty?: number
-  }[]
+  items: OrderItem[]
   grandTotal: number
   savedAt: string
   status: QuoteStatus
-  convertedToInvoice?: string  // invoiceNo if converted
+  convertedToInvoice?: string  // LEGACY: pre-PO-workflow quotes may have this set; no longer created
+  poNumber?: string
+  poDueDate?: string
+  convertedToDelivery?: string  // deliveryNo once a delivery note has been generated
 }
 
 export interface SavedInvoice {
@@ -31,22 +35,27 @@ export interface SavedInvoice {
   date: string
   business: string
   customer: string
-  items: {
-    job: string
-    sellingPrice: number
-    filamentCost?: number
-    powerCost?: number
-    labourCost?: number
-    profit?: number
-    // Stock restoration fields
-    partId?: string
-    filamentType?: string
-    printGrams?: number
-    qty?: number
-  }[]
+  items: OrderItem[]
   grandTotal: number
   savedAt: string
   paid?: boolean
+  poNumber?: string
+  deliveryNo?: string
+  quoteNo?: string
+}
+
+export interface SavedDeliveryNote {
+  deliveryNo: string
+  quoteNo: string
+  date: string
+  business: string
+  customer: string
+  items: OrderItem[]
+  grandTotal: number
+  savedAt: string
+  poNumber?: string
+  poDueDate?: string
+  convertedToInvoice?: string
 }
 
 export interface InvItem {

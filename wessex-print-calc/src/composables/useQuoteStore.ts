@@ -37,10 +37,10 @@ export function useQuoteStore() {
     }
   }
 
-  async function setStatus(quote: SavedQuote, status: QuoteStatus) {
+  async function setStatus(quote: SavedQuote, status: QuoteStatus, extra?: Partial<SavedQuote>) {
     const idx = quotes.value.findIndex(q => q.quoteNo === quote.quoteNo)
     if (idx === -1) return
-    quotes.value.splice(idx, 1, { ...quotes.value[idx], status })
+    quotes.value.splice(idx, 1, { ...quotes.value[idx], status, ...extra })
     const map = getStatusMap()
     map[quote.quoteNo] = status
     saveStatusMap(map)
@@ -48,7 +48,7 @@ export function useQuoteStore() {
       await fetch(`/api/quotes/${encodeURIComponent(quote.quoteNo)}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status, ...extra }),
       })
     } catch {}
   }
@@ -65,30 +65,5 @@ export function useQuoteStore() {
     quotes.value.unshift(quote)
   }
 
-  async function convertToInvoice(quote: SavedQuote): Promise<{ invoiceNo: string; date: string } | null> {
-    try {
-      const res = await fetch(`/api/quotes/${encodeURIComponent(quote.quoteNo)}/convert`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      })
-      const data = await res.json()
-      // Mark locally as accepted + converted
-      const idx = quotes.value.findIndex(q => q.quoteNo === quote.quoteNo)
-      if (idx !== -1) {
-        quotes.value.splice(idx, 1, {
-          ...quotes.value[idx],
-          status: 'accepted',
-          convertedToInvoice: data.invoiceNo,
-        })
-      }
-      const map = getStatusMap()
-      map[quote.quoteNo] = 'accepted'
-      saveStatusMap(map)
-      return { invoiceNo: data.invoiceNo, date: data.date }
-    } catch {
-      return null
-    }
-  }
-
-  return { quotes, loading, apiError, fetchQuotes, setStatus, deleteQuote, addQuote, convertToInvoice }
+  return { quotes, loading, apiError, fetchQuotes, setStatus, deleteQuote, addQuote }
 }

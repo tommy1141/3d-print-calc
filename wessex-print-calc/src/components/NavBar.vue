@@ -33,7 +33,7 @@ function go(view: NavView) {
         </button>
         <button
           class="nav-tab"
-          :class="{ active: ['invoicing','calculator','quotes','invoices','invoice','quote-preview'].includes(activeView) }"
+          :class="{ active: ['invoicing','calculator','quotes','invoices','invoice','quote-preview','delivery-notes'].includes(activeView) }"
           @click="go('invoicing')"
         >
           🧾 Invoicing
@@ -83,7 +83,7 @@ function go(view: NavView) {
           </button>
           <button
             class="nav-tab"
-            :class="{ active: ['invoicing','calculator','quotes','invoices','invoice','quote-preview'].includes(activeView) }"
+            :class="{ active: ['invoicing','calculator','quotes','invoices','invoice','quote-preview','delivery-notes'].includes(activeView) }"
             @click="go('invoicing')"
           >
             🧾 Invoicing

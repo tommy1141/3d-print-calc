@@ -111,23 +111,64 @@ app.delete('/api/quotes/:quoteNo', (req, res) => {
   res.json({ ok: true })
 })
 
-// Convert quote → invoice (marks quote as converted, creates invoice)
-app.post('/api/quotes/:quoteNo/convert', (req, res) => {
-  const quotes = readQuotes()
-  const q = quotes.find(q => q.quoteNo === req.params.quoteNo)
-  if (!q) return res.status(404).json({ error: 'Not found' })
+// ── Delivery Notes ────────────────────────────────────────────────
+const DELIVERY_NOTES_FILE = join(DATA_DIR, 'delivery-notes.json')
+
+function readDeliveryNotes() {
+  if (!existsSync(DELIVERY_NOTES_FILE)) return []
+  try { return JSON.parse(readFileSync(DELIVERY_NOTES_FILE, 'utf8')) } catch { return [] }
+}
+function writeDeliveryNotes(notes) {
+  writeFileSync(DELIVERY_NOTES_FILE, JSON.stringify(notes, null, 2))
+}
+function nextDeliveryNo() {
+  const notes = readDeliveryNotes()
+  const max = notes.reduce((h, n) => {
+    const num = parseInt((n.deliveryNo || '').replace('DN-', ''), 10)
+    return isNaN(num) ? h : Math.max(h, num)
+  }, 0)
+  return 'DN-' + String(max + 1).padStart(5, '0')
+}
+
+app.get('/api/delivery-notes', (_req, res) => res.json(readDeliveryNotes()))
+
+app.post('/api/delivery-notes', (req, res) => {
+  const deliveryNo = nextDeliveryNo()
+  const date       = new Date().toLocaleDateString('en-GB')
+  const dn         = { ...req.body, deliveryNo, date, savedAt: new Date().toISOString() }
+  const notes      = readDeliveryNotes()
+  notes.unshift(dn)
+  writeDeliveryNotes(notes)
+  // Atomically link the source quote to this DN
+  if (req.body.quoteNo) {
+    const quotes = readQuotes()
+    const q = quotes.find(q => q.quoteNo === req.body.quoteNo)
+    if (q) { q.convertedToDelivery = deliveryNo; writeQuotes(quotes) }
+  }
+  res.json({ ok: true, deliveryNo, date })
+})
+
+app.delete('/api/delivery-notes/:deliveryNo', (req, res) => {
+  writeDeliveryNotes(readDeliveryNotes().filter(n => n.deliveryNo !== req.params.deliveryNo))
+  res.json({ ok: true })
+})
+
+app.post('/api/delivery-notes/:deliveryNo/convert', (req, res) => {
+  const notes = readDeliveryNotes()
+  const dn = notes.find(n => n.deliveryNo === req.params.deliveryNo)
+  if (!dn) return res.status(404).json({ error: 'Not found' })
   const invoiceNo = nextInvoiceNo()
   const date      = new Date().toLocaleDateString('en-GB')
-  const invoice   = { ...q, invoiceNo, date, savedAt: new Date().toISOString(), paid: false }
-  delete invoice.quoteNo; delete invoice.status; delete invoice.convertedToInvoice
+  const invoice   = { ...dn, invoiceNo, date, savedAt: new Date().toISOString(), paid: false }
+  delete invoice.convertedToInvoice
   const invoices = readInvoices()
   invoices.unshift(invoice)
   writeInvoices(invoices)
-  q.status = 'accepted'
-  q.convertedToInvoice = invoiceNo
-  writeQuotes(quotes)
+  dn.convertedToInvoice = invoiceNo
+  writeDeliveryNotes(notes)
   res.json({ ok: true, invoiceNo, date })
 })
+
 app.get('/api/settings', (_req, res) => {
   if (!existsSync(SETTINGS_FILE)) return res.json({})
   try { res.json(JSON.parse(readFileSync(SETTINGS_FILE, 'utf8'))) }

@@ -8,6 +8,10 @@ function escHtml(str: string): string {
     .replace(/"/g, '&quot;')
 }
 
+function stripQty(job: string): string {
+  return job.replace(/ ×\d+$/, '')
+}
+
 const INVOICE_STYLES = `
   * { box-sizing:border-box; margin:0; padding:0; }
   body { font-family:'Segoe UI',sans-serif; color:#1a1a2e; background:#fff; padding:48px; font-size:14px; }
@@ -26,6 +30,7 @@ const INVOICE_STYLES = `
   tbody tr:nth-child(even) { background:#f5f7fb; print-color-adjust:exact; -webkit-print-color-adjust:exact; }
   tbody td { padding:10px 14px; border-bottom:1px solid #e8ecf2; }
   .amount { text-align:right; }
+  .qty { text-align:center; width:48px; }
   .totals { margin-left:auto; width:260px; border-collapse:collapse; }
   .totals td { padding:7px 4px; }
   .totals .lbl { color:#555; }
@@ -42,7 +47,7 @@ const INVOICE_STYLES = `
 
 export function useInvoice() {
   function generateInvoice(
-    items: { job: string; sellingPrice: number }[],
+    items: { job: string; sellingPrice: number; qty?: number }[],
     business: string,
     customer: string,
     invoiceNo: string,
@@ -53,7 +58,7 @@ export function useInvoice() {
     const cust       = escHtml(customer || 'Customer')
     const grandTotal = items.reduce((sum, item) => sum + item.sellingPrice, 0)
     const rows       = items
-      .map(item => `<tr><td>${escHtml(item.job)}</td><td class="amount">£${item.sellingPrice.toFixed(2)}</td></tr>`)
+      .map(item => `<tr><td>${escHtml(stripQty(item.job))}</td><td class="qty">${item.qty ?? 1}</td><td class="amount">£${item.sellingPrice.toFixed(2)}</td></tr>`)
       .join('')
 
     const { address, email, phone, bankName, accountName, sortCode, accountNumber } = useCompany()
@@ -107,7 +112,7 @@ export function useInvoice() {
     <div class="party"><h3>Bill To</h3><p>${cust}</p></div>
   </div>
   <table>
-    <thead><tr><th>Description</th><th class="amount">&pound; Amount</th></tr></thead>
+    <thead><tr><th>Description</th><th class="qty">Qty</th><th class="amount">&pound; Amount</th></tr></thead>
     <tbody>${rows}</tbody>
   </table>
   <table class="totals">
@@ -127,7 +132,7 @@ export function useInvoice() {
   }
 
   function generateQuote(
-    items: { job: string; sellingPrice: number }[],
+    items: { job: string; sellingPrice: number; qty?: number }[],
     business: string,
     customer: string,
     quoteNo: string,
@@ -137,7 +142,7 @@ export function useInvoice() {
     const cust       = escHtml(customer || 'Customer')
     const grandTotal = items.reduce((sum, item) => sum + item.sellingPrice, 0)
     const rows       = items
-      .map(item => `<tr><td>${escHtml(item.job)}</td><td class="amount">£${item.sellingPrice.toFixed(2)}</td></tr>`)
+      .map(item => `<tr><td>${escHtml(stripQty(item.job))}</td><td class="qty">${item.qty ?? 1}</td><td class="amount">£${item.sellingPrice.toFixed(2)}</td></tr>`)
       .join('')
 
     const { address, email, phone } = useCompany()
@@ -176,7 +181,7 @@ export function useInvoice() {
     <div class="party"><h3>Quoted For</h3><p>${cust}</p></div>
   </div>
   <table>
-    <thead><tr><th>Description</th><th class="amount">&pound; Amount</th></tr></thead>
+    <thead><tr><th>Description</th><th class="qty">Qty</th><th class="amount">&pound; Amount</th></tr></thead>
     <tbody>${rows}</tbody>
   </table>
   <table class="totals">
@@ -195,7 +200,7 @@ export function useInvoice() {
   }
 
   function generateDeliveryNote(
-    items: { job: string }[],
+    items: { job: string; qty?: number }[],
     business: string,
     customer: string,
     deliveryNo: string,
@@ -207,7 +212,7 @@ export function useInvoice() {
     const biz  = escHtml(business || 'My 3D Print Shop')
     const cust = escHtml(customer || 'Customer')
     const rows = items
-      .map(item => `<tr><td>${escHtml(item.job)}</td></tr>`)
+      .map(item => `<tr><td>${escHtml(stripQty(item.job))}</td><td class="qty">${item.qty ?? 1}</td></tr>`)
       .join('')
 
     const { address, email, phone } = useCompany()
@@ -256,7 +261,7 @@ export function useInvoice() {
     <div class="party"><h3>Delivered To</h3><p>${cust}</p></div>
   </div>
   <table>
-    <thead><tr><th>Description</th></tr></thead>
+    <thead><tr><th>Description</th><th class="qty">Qty</th></tr></thead>
     <tbody>${rows}</tbody>
   </table>
   <div class="sig-row">

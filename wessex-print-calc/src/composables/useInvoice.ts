@@ -231,9 +231,10 @@ export function useInvoice() {
   <meta charset="UTF-8"/>
   <title>${escHtml(deliveryNo)}</title>
   <style>${DN_STYLES}
-  .sig-row { display:flex; gap:80px; margin-top:64px; }
+  .sig-row { display:flex; gap:40px; margin-top:56px; }
   .sig-box { flex:1; }
-  .sig-line { border-top:1px solid #999; margin-top:48px; padding-top:6px; font-size:12px; color:#666; }
+  .sig-write-line { border-bottom:1.5px solid #333; height:36px; }
+  .sig-label { font-size:11px; color:#666; margin-top:5px; }
   </style>
 </head>
 <body>
@@ -259,9 +260,9 @@ export function useInvoice() {
     <tbody>${rows}</tbody>
   </table>
   <div class="sig-row">
-    <div class="sig-box"><div class="sig-line">Delivered By</div></div>
-    <div class="sig-box"><div class="sig-line">Received By</div></div>
-    <div class="sig-box"><div class="sig-line">Date</div></div>
+    <div class="sig-box"><div class="sig-write-line"></div><div class="sig-label">Delivered By</div></div>
+    <div class="sig-box"><div class="sig-write-line"></div><div class="sig-label">Received By</div></div>
+    <div class="sig-box"><div class="sig-write-line"></div><div class="sig-label">Date</div></div>
   </div>
   <div class="footer">Please sign and retain a copy for your records.</div>
   <br/>

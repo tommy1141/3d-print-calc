@@ -8,7 +8,7 @@ import type { FilamentType } from '@/composables/useFilaments'
 
 const emit = defineEmits<{ reprint: [inv: SavedInvoice] }>()
 
-const { invoices, loading, apiError, fetchInvoices, togglePaid, deleteInvoice: storeDelete, renameInvoice } = useInvoiceStore()
+const { invoices, loading, apiError, fetchInvoices, togglePaid, deleteInvoice: storeDelete, renameInvoice, updatePoNumber } = useInvoiceStore()
 const { generateInvoice } = useInvoice()
 const { restorePartStock, restoreFilament } = useInventory()
 
@@ -30,6 +30,24 @@ async function deleteInvoice(inv: SavedInvoice) {
 // ── Inline rename ──────────────────────────────────────────────────
 const renamingNo  = ref<string | null>(null)
 const renameInput = ref('')
+
+// ── Inline PO edit ─────────────────────────────────────────────────
+const editingPoFor = ref<string | null>(null)
+const poInput      = ref('')
+
+function startEditPo(inv: SavedInvoice) {
+  editingPoFor.value = inv.invoiceNo
+  poInput.value      = inv.poNumber ?? ''
+}
+
+function cancelEditPo() {
+  editingPoFor.value = null
+}
+
+async function saveEditPo(invoiceNo: string) {
+  await updatePoNumber(invoiceNo, poInput.value.trim())
+  editingPoFor.value = null
+}
 
 function startRename(inv: SavedInvoice) {
   renamingNo.value  = inv.invoiceNo
@@ -96,7 +114,24 @@ async function saveRename(oldNo: string) {
             </td>
             <td>{{ inv.date }}</td>
             <td>{{ inv.customer }}</td>
-            <td class="po-cell">{{ inv.poNumber || '—' }}</td>
+            <td class="po-cell">
+              <template v-if="editingPoFor === inv.invoiceNo">
+                <input
+                  class="rename-input po-edit-input"
+                  v-model="poInput"
+                  placeholder="PO number…"
+                  @keydown.enter="saveEditPo(inv.invoiceNo)"
+                  @keydown.escape="cancelEditPo()"
+                  @click.stop
+                  autofocus
+                />
+                <button class="btn-rename-save" @click="saveEditPo(inv.invoiceNo)" title="Save">✓</button>
+                <button class="btn-rename-cancel" @click="cancelEditPo()" title="Cancel">✕</button>
+              </template>
+              <template v-else>
+                <span class="po-edit-text" @click="startEditPo(inv)" title="Click to edit PO number">{{ inv.poNumber || '—' }}</span>
+              </template>
+            </td>
             <td class="amount">£{{ Number(inv.grandTotal).toFixed(2) }}</td>
             <td>
               <button class="btn-paid" :class="inv.paid ? 'is-paid' : 'is-unpaid'" @click="togglePaid(inv)">
@@ -158,7 +193,10 @@ tbody td { padding: 10px 14px; color: #c8d0e0; }
 .btn-rename-cancel { background: #3a1a1a; color: #e94560; }
 .btn-rename-cancel:hover { background: #5a2a2a; }
 
-.po-cell { color: #7090b0; font-size: 0.82rem; font-family: monospace; }
+.po-cell { color: #a0bcd8; font-size: 0.9rem; font-family: monospace; white-space: nowrap; font-weight: 500; }
+.po-edit-text { cursor: pointer; border-bottom: 1px dashed rgba(160,188,216,0.4); }
+.po-edit-text:hover { border-bottom-color: #a0bcd8; color: #c8ddf0; }
+.po-edit-input { width: 140px; }
 .amount { text-align: right; font-weight: 600; color: #4caf50; }
 
 .btn-reprint { padding: 5px 14px; background: #1a4a7a; color: #e0e8f0; border: none; border-radius: 6px; font-size: 0.82rem; font-weight: 600; cursor: pointer; white-space: nowrap; transition: background 0.15s; }

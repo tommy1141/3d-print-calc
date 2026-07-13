@@ -48,9 +48,10 @@ app.patch('/api/invoices/:invoiceNo', (req, res) => {
   const invoices = readInvoices()
   const inv = invoices.find(i => i.invoiceNo === req.params.invoiceNo)
   if (!inv) return res.status(404).json({ error: 'Not found' })
-  inv.paid = req.body.paid
+  if ('paid' in req.body) inv.paid = req.body.paid
+  if ('poNumber' in req.body) inv.poNumber = req.body.poNumber || undefined
   writeInvoices(invoices)
-  res.json({ ok: true, paid: inv.paid })
+  res.json({ ok: true })
 })
 
 app.patch('/api/invoices/:invoiceNo/rename', (req, res) => {

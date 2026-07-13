@@ -76,6 +76,17 @@ export function useInvoiceStore() {
     invoices.value.unshift(invoice)
   }
 
+  async function updatePoNumber(invoiceNo: string, poNumber: string) {
+    const idx = invoices.value.findIndex(i => i.invoiceNo === invoiceNo)
+    if (idx === -1) return
+    await fetch(`/api/invoices/${encodeURIComponent(invoiceNo)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ poNumber: poNumber || null }),
+    })
+    invoices.value.splice(idx, 1, { ...invoices.value[idx], poNumber: poNumber || undefined })
+  }
+
   async function renameInvoice(oldNo: string, newNo: string) {
     const idx = invoices.value.findIndex(i => i.invoiceNo === oldNo)
     if (idx === -1) return
@@ -94,5 +105,5 @@ export function useInvoiceStore() {
     invoices.value.splice(idx, 1, { ...invoices.value[idx], invoiceNo: newNo })
   }
 
-  return { invoices, loading, apiError, fetchInvoices, togglePaid, deleteInvoice, addInvoice, renameInvoice }
+  return { invoices, loading, apiError, fetchInvoices, togglePaid, deleteInvoice, addInvoice, renameInvoice, updatePoNumber }
 }

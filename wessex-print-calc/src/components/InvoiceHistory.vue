@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useInvoice } from '@/composables/useInvoice'
 import { useInvoiceStore } from '@/composables/useInvoiceStore'
 import { useInventory } from '@/composables/useInventory'
@@ -8,28 +8,43 @@ import type { FilamentType } from '@/composables/useFilaments'
 
 const emit = defineEmits<{ reprint: [inv: SavedInvoice] }>()
 
-const { invoices, loading, apiError, fetchInvoices, togglePaid, deleteInvoice: storeDelete } = useInvoiceStore()
+const { invoices, loading, apiError, fetchInvoices, togglePaid, deleteInvoice: storeDelete, renameInvoice } = useInvoiceStore()
 const { generateInvoice } = useInvoice()
 const { restorePartStock, restoreFilament } = useInventory()
 
 onMounted(() => fetchInvoices())
 
 function reprint(inv: SavedInvoice) {
-  generateInvoice(inv.items, inv.business, inv.customer, inv.invoiceNo, inv.date)
+  generateInvoice(inv.items, inv.business, inv.customer, inv.invoiceNo, inv.date, true, inv.poNumber)
 }
 
 async function deleteInvoice(inv: SavedInvoice) {
   if (!confirm(`Delete ${inv.invoiceNo}? This cannot be undone.`)) return
-  // Restore stock for each line item that has the necessary data
   for (const item of inv.items) {
-    if (item.partId && item.qty) {
-      restorePartStock(item.partId, item.qty)
-    }
-    if (item.filamentType && item.printGrams) {
-      restoreFilament(item.filamentType as FilamentType, item.printGrams)
-    }
+    if (item.partId && item.qty) restorePartStock(item.partId, item.qty)
+    if (item.filamentType && item.printGrams) restoreFilament(item.filamentType as FilamentType, item.printGrams)
   }
   await storeDelete(inv.invoiceNo)
+}
+
+// ── Inline rename ──────────────────────────────────────────────────
+const renamingNo  = ref<string | null>(null)
+const renameInput = ref('')
+
+function startRename(inv: SavedInvoice) {
+  renamingNo.value  = inv.invoiceNo
+  renameInput.value = inv.invoiceNo
+}
+
+function cancelRename() {
+  renamingNo.value = null
+}
+
+async function saveRename(oldNo: string) {
+  const newNo = renameInput.value.trim()
+  if (!newNo || newNo === oldNo) { cancelRename(); return }
+  await renameInvoice(oldNo, newNo)
+  renamingNo.value = null
 }
 </script>
 
@@ -54,6 +69,7 @@ async function deleteInvoice(inv: SavedInvoice) {
             <th>Invoice #</th>
             <th>Date</th>
             <th>Customer</th>
+            <th>PO Ref</th>
             <th class="amount">Total</th>
             <th>Status</th>
             <th></th>
@@ -61,9 +77,26 @@ async function deleteInvoice(inv: SavedInvoice) {
         </thead>
         <tbody>
           <tr v-for="inv in invoices" :key="inv.invoiceNo">
-            <td class="inv-no">{{ inv.invoiceNo }}</td>
+            <td class="inv-no">
+              <template v-if="renamingNo === inv.invoiceNo">
+                <input
+                  class="rename-input"
+                  v-model="renameInput"
+                  @keydown.enter="saveRename(inv.invoiceNo)"
+                  @keydown.escape="cancelRename()"
+                  @click.stop
+                  autofocus
+                />
+                <button class="btn-rename-save" @click="saveRename(inv.invoiceNo)" title="Save">✓</button>
+                <button class="btn-rename-cancel" @click="cancelRename()" title="Cancel">✕</button>
+              </template>
+              <template v-else>
+                <span class="inv-no-text" @click="startRename(inv)" title="Click to rename">{{ inv.invoiceNo }}</span>
+              </template>
+            </td>
             <td>{{ inv.date }}</td>
             <td>{{ inv.customer }}</td>
+            <td class="po-cell">{{ inv.poNumber || '—' }}</td>
             <td class="amount">£{{ Number(inv.grandTotal).toFixed(2) }}</td>
             <td>
               <button class="btn-paid" :class="inv.paid ? 'is-paid' : 'is-unpaid'" @click="togglePaid(inv)">
@@ -82,129 +115,62 @@ async function deleteInvoice(inv: SavedInvoice) {
 </template>
 
 <style scoped>
-.history {
-  width: 100%;
-}
+.history { width: 100%; }
 
-.status-msg {
-  color: #a0a0b0;
-  font-size: 0.9rem;
-  padding: 24px 0;
-  text-align: center;
-}
+.status-msg { color: #a0a0b0; font-size: 0.9rem; padding: 24px 0; text-align: center; }
+.status-msg.warn { color: #e9a020; }
 
-.status-msg.warn {
-  color: #e9a020;
-}
+.table-wrap { overflow-x: auto; }
 
-.table-wrap {
-  overflow-x: auto;
-}
+table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+thead tr { background: #1a1a2e; }
+thead th { padding: 10px 14px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em; color: #a0b0c8; white-space: nowrap; }
+tbody tr { border-bottom: 1px solid #1a3a5a; transition: background 0.1s; }
+tbody tr:hover { background: #0f2a45; }
+tbody td { padding: 10px 14px; color: #c8d0e0; }
 
-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.9rem;
-}
+.inv-no { font-family: monospace; font-weight: 600; white-space: nowrap; }
+.inv-no-text { color: #e94560; cursor: pointer; border-bottom: 1px dashed rgba(233,69,96,0.4); }
+.inv-no-text:hover { border-bottom-color: #e94560; }
 
-thead tr {
-  background: #1a1a2e;
-}
-
-thead th {
-  padding: 10px 14px;
-  text-align: left;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: #a0b0c8;
-  white-space: nowrap;
-}
-
-tbody tr {
-  border-bottom: 1px solid #1a3a5a;
-  transition: background 0.1s;
-}
-
-tbody tr:hover {
-  background: #0f2a45;
-}
-
-tbody td {
-  padding: 10px 14px;
-  color: #c8d0e0;
-}
-
-.inv-no {
-  font-family: monospace;
-  color: #e94560;
-  font-weight: 600;
-}
-
-.amount {
-  text-align: right;
-  font-weight: 600;
-  color: #4caf50;
-}
-
-.btn-reprint {
-  padding: 5px 14px;
-  background: #1a4a7a;
+.rename-input {
+  background: #0f2040;
+  border: 1px solid #4a90d9;
+  border-radius: 5px;
   color: #e0e8f0;
-  border: none;
-  border-radius: 6px;
+  font-family: monospace;
+  font-size: 0.88rem;
+  padding: 2px 6px;
+  width: 120px;
+  outline: none;
+}
+
+.btn-rename-save, .btn-rename-cancel {
+  padding: 2px 6px;
+  border-radius: 4px;
   font-size: 0.82rem;
-  font-weight: 600;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background 0.15s;
-}
-
-.btn-reprint:hover {
-  background: #e94560;
-  color: #fff;
-}
-
-.actions-cell {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.btn-delete {
-  padding: 5px 10px;
-  background: none;
-  border: 1px solid #3a2a3a;
-  border-radius: 6px;
-  color: #e94560;
-  font-size: 0.85rem;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-.btn-delete:hover {
-  background: #e94560;
-  color: #fff;
-  border-color: #e94560;
-}
-
-.btn-paid {
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 0.78rem;
-  font-weight: 600;
   cursor: pointer;
   border: none;
-  white-space: nowrap;
-  transition: opacity 0.15s;
+  margin-left: 4px;
 }
+.btn-rename-save { background: #1a4a2a; color: #4caf50; }
+.btn-rename-save:hover { background: #2a6a3a; }
+.btn-rename-cancel { background: #3a1a1a; color: #e94560; }
+.btn-rename-cancel:hover { background: #5a2a2a; }
+
+.po-cell { color: #7090b0; font-size: 0.82rem; font-family: monospace; }
+.amount { text-align: right; font-weight: 600; color: #4caf50; }
+
+.btn-reprint { padding: 5px 14px; background: #1a4a7a; color: #e0e8f0; border: none; border-radius: 6px; font-size: 0.82rem; font-weight: 600; cursor: pointer; white-space: nowrap; transition: background 0.15s; }
+.btn-reprint:hover { background: #e94560; color: #fff; }
+
+.actions-cell { display: flex; gap: 8px; align-items: center; }
+
+.btn-delete { padding: 5px 10px; background: none; border: 1px solid #3a2a3a; border-radius: 6px; color: #e94560; font-size: 0.85rem; cursor: pointer; transition: background 0.15s; }
+.btn-delete:hover { background: #e94560; color: #fff; border-color: #e94560; }
+
+.btn-paid { padding: 4px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 600; cursor: pointer; border: none; white-space: nowrap; transition: opacity 0.15s; }
 .btn-paid:hover { opacity: 0.8; }
-.btn-paid.is-paid {
-  background: #1a4a2a;
-  color: #4caf50;
-}
-.btn-paid.is-unpaid {
-  background: #3a2a1a;
-  color: #e9a020;
-}
+.btn-paid.is-paid { background: #1a4a2a; color: #4caf50; }
+.btn-paid.is-unpaid { background: #3a2a1a; color: #e9a020; }
 </style>

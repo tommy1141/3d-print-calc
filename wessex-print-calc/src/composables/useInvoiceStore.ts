@@ -76,5 +76,23 @@ export function useInvoiceStore() {
     invoices.value.unshift(invoice)
   }
 
-  return { invoices, loading, apiError, fetchInvoices, togglePaid, deleteInvoice, addInvoice }
+  async function renameInvoice(oldNo: string, newNo: string) {
+    const idx = invoices.value.findIndex(i => i.invoiceNo === oldNo)
+    if (idx === -1) return
+    await fetch(`/api/invoices/${encodeURIComponent(oldNo)}/rename`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ newInvoiceNo: newNo }),
+    })
+    // Migrate the paid-map key so the status is preserved
+    const paidMap = getPaidMap()
+    if (oldNo in paidMap) {
+      paidMap[newNo] = paidMap[oldNo]
+      delete paidMap[oldNo]
+      savePaidMap(paidMap)
+    }
+    invoices.value.splice(idx, 1, { ...invoices.value[idx], invoiceNo: newNo })
+  }
+
+  return { invoices, loading, apiError, fetchInvoices, togglePaid, deleteInvoice, addInvoice, renameInvoice }
 }

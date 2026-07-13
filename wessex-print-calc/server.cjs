@@ -53,6 +53,17 @@ app.patch('/api/invoices/:invoiceNo', (req, res) => {
   res.json({ ok: true, paid: inv.paid })
 })
 
+app.patch('/api/invoices/:invoiceNo/rename', (req, res) => {
+  const newNo = (req.body.newInvoiceNo || '').trim()
+  if (!newNo) return res.status(400).json({ error: 'newInvoiceNo required' })
+  const invoices = readInvoices()
+  const inv = invoices.find(i => i.invoiceNo === req.params.invoiceNo)
+  if (!inv) return res.status(404).json({ error: 'Not found' })
+  inv.invoiceNo = newNo
+  writeInvoices(invoices)
+  res.json({ ok: true })
+})
+
 app.post('/api/invoices', (req, res) => {
   const invoiceNo = nextInvoiceNo()
   const date      = new Date().toLocaleDateString('en-GB')

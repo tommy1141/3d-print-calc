@@ -53,6 +53,7 @@ export function useInvoice() {
     invoiceNo: string,
     date: string,
     showPaymentDetails = true,
+    poNumber?: string,
   ) {
     const biz        = escHtml(business || 'My 3D Print Shop')
     const cust       = escHtml(customer || 'Customer')
@@ -105,6 +106,7 @@ export function useInvoice() {
       <h2>INVOICE</h2>
       <p>${escHtml(invoiceNo)}</p>
       <p>${date}</p>
+      ${poNumber ? `<p style="margin-top:4px;font-size:11px;color:#999;">PO Ref: ${escHtml(poNumber)}</p>` : ''}
     </div>
   </div>
   <div class="parties">

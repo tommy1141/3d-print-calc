@@ -496,7 +496,7 @@ function onPrintInvoice(showPaymentDetails: boolean) {
           <button class="back-btn" @click="activeView = 'invoicing'">← Back to Invoicing</button>
         </div>
         <div class="panel">
-          <InvoiceHistory @reprint="(inv) => generateInvoice(inv.items, inv.business, inv.customer, inv.invoiceNo, inv.date)" />
+          <InvoiceHistory @reprint="(inv) => generateInvoice(inv.items, inv.business, inv.customer, inv.invoiceNo, inv.date, true, inv.poNumber)" />
         </div>
       </div>
 

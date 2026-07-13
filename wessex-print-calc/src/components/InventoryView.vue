@@ -146,15 +146,47 @@ function batchType(p: PartDefinition): FilamentType {
   return p.filamentType === 'any' ? (batchFilamentChoice.value[p.id] ?? FILAMENT_KEYS[0]) : p.filamentType
 }
 
-function doPrintBatch(partId: string) {
-  const part = parts.value.find(p => p.id === partId)
-  if (!part) return
-  const type = batchType(part)
-  const gramsNeeded = batchDeductGrams(part)
-  const avail = spools.value.filter(s => s.type === type).reduce((sum, s) => sum + s.grams, 0)
-  const warn = avail < gramsNeeded ? `\n⚠️ Only ${Math.round(avail)}g available — ${Math.round(gramsNeeded)}g needed.` : ''
-  if (!confirm(`Log a batch of ${part.batchSize}× "${part.name}"?\nDeducts ~${Math.round(gramsNeeded)}g of ${typeLabel(type)}.${warn}`)) return
-  printBatch(partId, type)
+// Inline batch-confirm state
+const batchPendingPart = ref<string | null>(null)
+const batchSpoolChoice = ref<Record<string, string>>({})
+const batchSuccess     = ref<string | null>(null)
+
+// When the user changes filament type for an 'any' part while confirm is open, re-select first spool
+watch(batchFilamentChoice, () => {
+  if (!batchPendingPart.value) return
+  const p = parts.value.find(p => p.id === batchPendingPart.value)
+  if (!p) return
+  const firstSpool = spools.value.find(s => s.type === batchType(p))
+  batchSpoolChoice.value[batchPendingPart.value] = firstSpool?.id ?? ''
+}, { deep: true })
+
+function spoolsForBatch(p: PartDefinition): FilamentSpool[] {
+  return spools.value.filter(s => s.type === batchType(p))
+}
+
+function availForBatch(p: PartDefinition): number {
+  const id = batchSpoolChoice.value[p.id]
+  if (id) return spools.value.find(s => s.id === id)?.grams ?? 0
+  return spools.value.filter(s => s.type === batchType(p)).reduce((sum, s) => sum + s.grams, 0)
+}
+
+function openBatchConfirm(p: PartDefinition) {
+  batchPendingPart.value = p.id
+  batchSuccess.value = null
+  const firstSpool = spools.value.find(s => s.type === batchType(p))
+  batchSpoolChoice.value[p.id] = firstSpool?.id ?? ''
+}
+
+function confirmBatch(p: PartDefinition) {
+  const spoolId = batchSpoolChoice.value[p.id] || undefined
+  printBatch(p.id, batchType(p), spoolId)
+  batchPendingPart.value = null
+  batchSuccess.value = p.id
+  setTimeout(() => { if (batchSuccess.value === p.id) batchSuccess.value = null }, 2500)
+}
+
+function cancelBatch() {
+  batchPendingPart.value = null
 }
 
 function confirmDeleteSpool(id: string) {
@@ -548,39 +580,71 @@ const suggestedCost = computed(() => {
             <tr><th>Part</th><th>Filament</th><th class="col-spec">Spec (per unit)</th><th>Batch</th><th class="col-stock">In Stock</th><th class="col-act2"></th></tr>
           </thead>
           <tbody>
-            <tr v-for="p in parts" :key="p.id" :class="{ 'row-low': p.inStock === 0 }">
-              <td class="name-cell">{{ p.name }}</td>
-              <td>
-                <span class="type-chip" :class="{ 'type-chip-any': p.filamentType === 'any' }">{{ typeLabel(p.filamentType) }}</span>
-                <select v-if="p.filamentType === 'any'" class="batch-filament-select" v-model="batchFilamentChoice[p.id]" title="Filament to deduct when logging a batch">
-                  <option v-for="k in FILAMENT_KEYS" :key="k" :value="k">{{ typeLabel(k) }}</option>
-                </select>
-              </td>
-              <td class="col-spec spec-cell">
-                {{ p.gramsPerUnit }}g/unit ·
-                <span v-if="p.printHoursPerUnit">{{ p.printHoursPerUnit }}h </span>{{ p.printMinsPerUnit }}m ·
-                {{ p.labourMinsPerUnit }}min labour
-              </td>
-              <td>
-                {{ p.batchSize }} units
-                <span v-if="p.batchFilamentGrams" class="batch-grams-badge">{{ p.batchFilamentGrams }}g</span>
-                <span v-else class="batch-grams-badge muted">~{{ p.gramsPerUnit * p.batchSize }}g</span>
-              </td>
-              <td class="col-stock">
-                <div v-if="editingId === p.id" class="rem-edit">
-                  <input class="rem-input" type="number" :min="0" step="1" v-model.number="editingVal"
-                    @keydown.enter="saveEdit(p.id)" @blur="saveEdit(p.id)" />
-                </div>
-                <button v-else class="stock-badge" :class="{ 'stock-zero': p.inStock === 0 }" @click="startEdit(p.id, p.inStock)">
-                  {{ p.inStock }}
-                </button>
-              </td>
-              <td class="col-act2">
-                <button class="btn-edit" @click="startEditPart(p)">✏️</button>
-                <button class="btn-batch" @click="doPrintBatch(p.id)">🖨️ Print Batch</button>
-                <button class="btn-del" @click="confirmDeletePart(p.id)">🗑️</button>
-              </td>
-            </tr>
+            <template v-for="p in parts" :key="p.id">
+              <tr :class="{ 'row-low': p.inStock === 0, 'row-batch-active': batchPendingPart === p.id }">
+                <td class="name-cell">{{ p.name }}</td>
+                <td>
+                  <span class="type-chip" :class="{ 'type-chip-any': p.filamentType === 'any' }">{{ typeLabel(p.filamentType) }}</span>
+                  <select v-if="p.filamentType === 'any'" class="batch-filament-select" v-model="batchFilamentChoice[p.id]" title="Filament to deduct when logging a batch">
+                    <option v-for="k in FILAMENT_KEYS" :key="k" :value="k">{{ typeLabel(k) }}</option>
+                  </select>
+                </td>
+                <td class="col-spec spec-cell">
+                  {{ p.gramsPerUnit }}g/unit ·
+                  <span v-if="p.printHoursPerUnit">{{ p.printHoursPerUnit }}h </span>{{ p.printMinsPerUnit }}m ·
+                  {{ p.labourMinsPerUnit }}min labour
+                </td>
+                <td>
+                  {{ p.batchSize }} units
+                  <span v-if="p.batchFilamentGrams" class="batch-grams-badge">{{ p.batchFilamentGrams }}g</span>
+                  <span v-else class="batch-grams-badge muted">~{{ p.gramsPerUnit * p.batchSize }}g</span>
+                </td>
+                <td class="col-stock">
+                  <div v-if="editingId === p.id" class="rem-edit">
+                    <input class="rem-input" type="number" :min="0" step="1" v-model.number="editingVal"
+                      @keydown.enter="saveEdit(p.id)" @blur="saveEdit(p.id)" />
+                  </div>
+                  <button v-else class="stock-badge" :class="{ 'stock-zero': p.inStock === 0 }" @click="startEdit(p.id, p.inStock)">
+                    {{ p.inStock }}
+                  </button>
+                </td>
+                <td class="col-act2">
+                  <button class="btn-edit" @click="startEditPart(p)">✏️</button>
+                  <button v-if="batchPendingPart === p.id" class="btn-batch-cancel" @click="cancelBatch()">✕</button>
+                  <button v-else class="btn-batch" :class="{ 'btn-batch-ok': batchSuccess === p.id }" @click="openBatchConfirm(p)">
+                    {{ batchSuccess === p.id ? '✅ Done' : '🖨️ Print Batch' }}
+                  </button>
+                  <button class="btn-del" @click="confirmDeletePart(p.id)">🗑️</button>
+                </td>
+              </tr>
+              <tr v-if="batchPendingPart === p.id" class="batch-confirm-row">
+                <td colspan="6" class="batch-confirm-cell">
+                  <div class="batch-confirm-panel">
+                    <div class="batch-confirm-left">
+                      <span class="batch-confirm-label">Spool:</span>
+                      <select v-model="batchSpoolChoice[p.id]" class="batch-spool-select">
+                        <option value="">Auto (oldest first)</option>
+                        <option v-for="s in spoolsForBatch(p)" :key="s.id" :value="s.id">
+                          {{ s.customName }} · {{ s.colour }} — {{ Math.round(s.grams) }}g
+                        </option>
+                      </select>
+                      <span class="batch-avail" :class="{ 'batch-avail-warn': availForBatch(p) < batchDeductGrams(p) }">
+                        ~{{ Math.round(batchDeductGrams(p)) }}g needed
+                        <template v-if="spoolsForBatch(p).length === 0">
+                          · <span class="batch-no-stock">no {{ typeLabel(batchType(p)) }} in stock</span>
+                        </template>
+                        <template v-else>
+                          · {{ Math.round(availForBatch(p)) }}g available
+                        </template>
+                      </span>
+                    </div>
+                    <div class="batch-confirm-right">
+                      <button class="btn-confirm-batch" @click="confirmBatch(p)">✅ Log {{ p.batchSize }}× Batch</button>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            </template>
           </tbody>
         </table>
       </div>
@@ -710,4 +774,21 @@ const suggestedCost = computed(() => {
 
 .slide-enter-active, .slide-leave-active { transition: opacity 0.2s, transform 0.2s; }
 .slide-enter-from, .slide-leave-to { opacity: 0; transform: translateY(-8px); }
+
+.row-batch-active { background: rgba(74,144,217,0.05); }
+.batch-confirm-row { background: #08111e; }
+.batch-confirm-cell { padding: 0 !important; }
+.batch-confirm-panel { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 10px 14px; border-left: 3px solid #4a90d9; background: rgba(74,144,217,0.06); }
+.batch-confirm-left { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.batch-confirm-right { flex-shrink: 0; }
+.batch-confirm-label { font-size: 0.78rem; color: #5a7a9a; font-weight: 500; white-space: nowrap; }
+.batch-spool-select { background: #0f2040; border: 1px solid #4a90d9; border-radius: 5px; color: #a0c0e0; font-size: 0.8rem; padding: 4px 8px; outline: none; cursor: pointer; max-width: 260px; }
+.batch-avail { font-size: 0.75rem; color: #5a7a9a; }
+.batch-avail-warn { color: #e94560; }
+.batch-no-stock { font-weight: 600; }
+.btn-confirm-batch { padding: 5px 14px; background: #1a4a7a; border: none; border-radius: 6px; color: #a0d8ff; font-size: 0.82rem; font-weight: 600; cursor: pointer; transition: background 0.15s; white-space: nowrap; }
+.btn-confirm-batch:hover { background: #2a6aaa; }
+.btn-batch-cancel { padding: 4px 10px; background: transparent; border: 1px solid #2a4a6a; border-radius: 6px; color: #5a7a9a; font-size: 0.8rem; cursor: pointer; transition: border-color 0.15s, color 0.15s; margin-right: 6px; }
+.btn-batch-cancel:hover { border-color: #e94560; color: #e94560; }
+.btn-batch-ok { background: rgba(76,175,80,0.2) !important; color: #4caf50 !important; }
 </style>

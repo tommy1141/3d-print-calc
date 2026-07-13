@@ -97,6 +97,12 @@ export function useInventory() {
     }
   }
 
+  /** Deduct grams from a specific spool by ID. Silent if spool not found. */
+  function deductFilamentFromSpool(spoolId: string, grams: number) {
+    const s = spools.value.find(s => s.id === spoolId)
+    if (s) s.grams = Math.max(0, s.grams - grams)
+  }
+
   /** Total grams available for a filament type */
   function availableGrams(type: FilamentType): number {
     return spools.value.filter(s => s.type === type).reduce((sum, s) => sum + s.grams, 0)
@@ -117,15 +123,20 @@ export function useInventory() {
   }
 
   /** Log a completed batch print: adds batchSize to stock and deducts filament.
-   *  For 'any'-filament parts, `filamentType` selects which spool type to deduct from. */
-  function printBatch(partId: string, filamentType?: FilamentType) {
+   *  For 'any'-filament parts, `filamentType` selects which spool type to deduct from.
+   *  If `spoolId` is provided, deducts from that specific spool instead of oldest-first. */
+  function printBatch(partId: string, filamentType?: FilamentType, spoolId?: string) {
     const part = parts.value.find(p => p.id === partId)
     if (!part) return
     part.inStock += part.batchSize
     const type = part.filamentType === 'any' ? filamentType : part.filamentType
     if (!type) return
-    // Use explicit batch filament total if set, otherwise estimate from per-unit grams
-    deductFilament(type, part.batchFilamentGrams ?? part.gramsPerUnit * part.batchSize)
+    const grams = part.batchFilamentGrams ?? part.gramsPerUnit * part.batchSize
+    if (spoolId) {
+      deductFilamentFromSpool(spoolId, grams)
+    } else {
+      deductFilament(type, grams)
+    }
   }
 
   /** Update an existing part definition (preserves id and inStock). */
@@ -156,7 +167,7 @@ export function useInventory() {
   return {
     spools, parts, updatePart,
     addSpool, updateSpoolGrams, updateSpool, setSpoolRolls, deleteSpool,
-    deductFilament, restoreFilament, availableGrams,
+    deductFilament, deductFilamentFromSpool, restoreFilament, availableGrams,
     addPart, updatePartStock, deletePart, printBatch, deductPartStock, restorePartStock,
   }
 }
